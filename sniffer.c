@@ -51,12 +51,14 @@ int bind_socket_to_device(char *device, int rawsock, int protocol) {
 		exit(-1);
 	}
 
-	pkt = (struct packet_mreq *) malloc(sizeof(struct packet_mreq));
+	pkt = (struct packet_mreq *)malloc(sizeof(struct packet_mreq));
 	memset((struct packet_mreq *)pkt, 0, sizeof(struct packet_mreq));
 	pkt->mr_ifindex = ifr.ifr_ifindex;
 	pkt->mr_type = PACKET_MR_PROMISC;
 	setsockopt(rawsock, SOL_PACKET, PACKET_MR_PROMISC, (char *)&pkt,
 									sizeof(struct packet_mreq));
+
+	free(pkt);
 
 	return 1;
 }
