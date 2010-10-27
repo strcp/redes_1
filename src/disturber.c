@@ -108,7 +108,7 @@ void debug_packet(unsigned char *packet, int len) {
 		printf("From: %s\n", addr);
 	}
 
-	switch (ip6->ip6_ctlun.ip6_un1.ip6_un1_nxt) {
+	switch (ip6->ip6_nxt) {
 		case IPPROTO_ICMPV6:
 			icmpv6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
 			printf("ICMPv6 DEBUG:\n");
@@ -121,6 +121,7 @@ void debug_packet(unsigned char *packet, int len) {
 			printf("Src Port: %d\n", tcp->source);
 			break;
 		default:
+			printf("DEBUG: %d\n", ip6->ip6_nxt);
 			break;
 	}
 	printf("- PACKET END -\n\n");
