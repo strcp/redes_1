@@ -11,13 +11,13 @@
 #include <linux/if_packet.h>
 #include <linux/if_ether.h>
 #include <linux/ipv6.h>
+#include <linux/icmpv6.h>
 
 
-int CreateRawSocket(int protocol_to_sniff)
-{
+int raw_socket(int proto) {
 	int rawsock;
 
-	if ((rawsock = socket(PF_PACKET, SOCK_RAW, htons(protocol_to_sniff)))== -1) {
+	if ((rawsock = socket(PF_PACKET, SOCK_RAW, htons(proto))) < 0) {
 		perror("Error creating raw socket: ");
 		exit(-1);
 	}
@@ -25,11 +25,10 @@ int CreateRawSocket(int protocol_to_sniff)
 	return rawsock;
 }
 
-int BindRawSocketToInterface(char *device, int rawsock, int protocol) {
-	struct sockaddr_ll sll;
+int bind_socket_to_device(char *device, int rawsock, int protocol) {
+	struct packet_mreq *pkt;
 	struct ifreq ifr;
 
-	bzero(&sll, sizeof(sll));
 	bzero(&ifr, sizeof(ifr));
 
 	/* First Get the Interface Index  */
@@ -38,27 +37,27 @@ int BindRawSocketToInterface(char *device, int rawsock, int protocol) {
 		printf("Error getting Interface index !\n");
 		exit(-1);
 	}
-	/* Bind our raw socket to this interface */
-	sll.sll_family = AF_PACKET;
-	sll.sll_ifindex = ifr.ifr_ifindex;
-	sll.sll_protocol = htons(protocol);
 
-	
-	if (ioctl(rawsock, SIOCGIFFLAGS, &ifr) == -1) {
-		printf("Error getting interface flags\n");
+	/* Go promisc */
+	strncpy(ifr.ifr_name, device, IFNAMSIZ);
+	if ((ioctl(rawsock, SIOCGIFFLAGS, &ifr)) < 0) {
+		perror("Error: ");
 		exit(-1);
 	}
-        ifr.ifr_flags |= IFF_PROMISC;
-        
-	if (ioctl(rawsock, SIOCSIFFLAGS, &ifr) == -1) {
-		printf("Error setting the interface flags\n");
+
+	ifr.ifr_flags |= IFF_PROMISC;
+	if ((ioctl(rawsock, SIOCSIFFLAGS, &ifr)) < 0) {
+		perror("Error: ");
 		exit(-1);
 	}
-	
-	if ((bind(rawsock, (struct sockaddr *)&sll, sizeof(sll))) == -1) {
-		perror("Error binding raw socket to interface\n");
-		exit(-1);
-	}
+
+	pkt = (struct packet_mreq *) malloc(sizeof(struct packet_mreq));
+	memset((struct packet_mreq *)pkt, 0, sizeof(struct packet_mreq));
+	pkt->mr_ifindex = ifr.ifr_ifindex;
+	pkt->mr_type = PACKET_MR_PROMISC;
+	setsockopt(rawsock, SOL_PACKET, PACKET_MR_PROMISC, (char *)&pkt,
+									sizeof(struct packet_mreq));
+
 	return 1;
 }
 
@@ -66,27 +65,43 @@ void PrintPacketInHex(unsigned char *packet, int len) {
 	unsigned char *p = packet;
 	struct ethhdr *eth;
 	struct ipv6hdr *ip6;
-	char daddr[16];
+	struct icmp6hdr *icmpv6;
+	char addr[16];
 
-	printf("\n\n---------Packet---Starts----\n\n");
+	printf("\n- PACKET START -\n");
 
 	eth = (struct ethhdr *)packet;
 	ip6 = (struct ipv6hdr *)(packet + sizeof(struct ethhdr));
 
 	if (ip6->daddr.s6_addr) {
-		inet_ntop(AF_INET6, ip6->daddr.s6_addr, daddr, sizeof(struct in6_addr));
-		printf("Debug: %s\n", daddr);
+		inet_ntop(AF_INET6, ip6->daddr.s6_addr, addr, sizeof(struct in6_addr));
+		printf("To: %s\n", addr);
 	}
-	printf("Debug: %s\n", eth->h_dest);
-	printf("Debug: %d\n", ip6->version);
+
+	memset(addr, 0, 16);
+
+	if (ip6->saddr.s6_addr) {
+		inet_ntop(AF_INET6, ip6->saddr.s6_addr, addr, sizeof(struct in6_addr));
+		printf("From: %s\n", addr);
+	}
+
+	switch (ip6->nexthdr) {
+		case IPPROTO_ICMPV6:
+			icmpv6 = (struct icmp6hdr *)((char *)ip6 + sizeof(struct ipv6hdr));
+			printf("ICMPv6 DEBUG:\n");
+			printf("Type: %d\n", icmpv6->icmp6_type);
+			break;
+		default:
+			break;
+	}
+/*
 	while (len--) {
 		printf("%.2x ", *p);
 		p++;
 	}
-
-	printf("\n\n--------Packet---Ends-----\n\n");
+*/
+	printf("- PACKET END -\n\n");
 }
-
 
 main(int argc, char **argv)
 {
@@ -99,15 +114,12 @@ main(int argc, char **argv)
 	int packet_info_size = sizeof(packet_info);
 
 	/* create the raw socket */
+	raw = raw_socket(ETH_P_IPV6);
 
-	raw = CreateRawSocket(ETH_P_IPV6);
-
-	/* Bind socket to interface */
-
-	BindRawSocketToInterface(argv[1], raw, ETH_P_IPV6);
+	/* Bind socket to interface and going promisc */
+	bind_socket_to_device(argv[1], raw, ETH_P_IPV6);
 
 	/* Get number of packets to sniff from user */
-
 	packets_to_sniff = atoi(argv[2]);
 
 	/* Start Sniffing and print Hex of every packet */
