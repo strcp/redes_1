@@ -8,12 +8,13 @@
 #include <net/if.h>
 
 #include <linux/if_packet.h>
-#include <linux/if_ether.h>
-#include <linux/in.h>
-#include <linux/ipv6.h>
-#include <linux/icmpv6.h>
-#include <linux/tcp.h>
 
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <netinet/if_ether.h>
+#include <netinet/ip6.h>
+#include <netinet/icmp6.h>
+#include <netinet/tcp.h>
 
 int raw_socket(int proto) {
 	int rawsock;
@@ -26,7 +27,7 @@ int raw_socket(int proto) {
 	return rawsock;
 }
 
-int bind_socket_to_device(char *device, int rawsock, int protocol) {
+int bind_socket_to_device(char *device, int rawsock) {
 	struct packet_mreq *pkt;
 	struct ifreq ifr;
 
@@ -64,38 +65,38 @@ int bind_socket_to_device(char *device, int rawsock, int protocol) {
 	return 1;
 }
 
-void PrintPacketInHex(unsigned char *packet, int len) {
+void debug_packet(unsigned char *packet, int len) {
 	struct ethhdr *eth;
-	struct ipv6hdr *ip6;
-	struct icmp6hdr *icmpv6;
+	struct ip6_hdr *ip6;
+	struct icmp6_hdr *icmpv6;
 	struct tcphdr *tcp;
-	char addr[16];
+	char addr[INET6_ADDRSTRLEN];
 
-	printf("\n- PACKET START -\n");
+	printf("\n- PACKET START (%d) -\n", len);
 
 	eth = (struct ethhdr *)packet;
-	ip6 = (struct ipv6hdr *)(packet + sizeof(struct ethhdr));
+	ip6 = (struct ip6_hdr *)(packet + sizeof(struct ethhdr));
 
-	if (ip6->daddr.s6_addr) {
-		inet_ntop(AF_INET6, ip6->daddr.s6_addr, addr, sizeof(struct in6_addr));
+	if (ip6->ip6_dst.s6_addr) {
+		inet_ntop(AF_INET6, ip6->ip6_dst.s6_addr, addr, INET6_ADDRSTRLEN);
 		printf("To: %s\n", addr);
 	}
 
-	memset(addr, 0, 16);
+	memset(addr, 0, INET6_ADDRSTRLEN);
 
-	if (ip6->saddr.s6_addr) {
-		inet_ntop(AF_INET6, ip6->saddr.s6_addr, addr, sizeof(struct in6_addr));
+	if (ip6->ip6_src.s6_addr) {
+		inet_ntop(AF_INET6, ip6->ip6_src.s6_addr, addr, INET6_ADDRSTRLEN);
 		printf("From: %s\n", addr);
 	}
 
-	switch (ip6->nexthdr) {
+	switch (ip6->ip6_ctlun.ip6_un1.ip6_un1_nxt) {
 		case IPPROTO_ICMPV6:
-			icmpv6 = (struct icmp6hdr *)((char *)ip6 + sizeof(struct ipv6hdr));
+			icmpv6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
 			printf("ICMPv6 DEBUG:\n");
 			printf("Type: %d\n", icmpv6->icmp6_type);
 			break;
 		case IPPROTO_TCP:
-			tcp = (struct tcphdr *)((char *)ip6 + sizeof(struct ipv6hdr));
+			tcp = (struct tcphdr *)((char *)ip6 + sizeof(struct ip6_hdr));
 			printf("TCP DEBUG:\n");
 			printf("Dest Port: %d\n", tcp->dest);
 			printf("Src Port: %d\n", tcp->source);
@@ -112,7 +113,6 @@ int main(int argc, char **argv) {
 	int len;
 	int packets_to_sniff;
 	struct sockaddr_ll packet_info;
-	struct sockaddr from;
 	int packet_info_size = sizeof(packet_info);
 
 
@@ -125,19 +125,20 @@ int main(int argc, char **argv) {
 	raw = raw_socket(ETH_P_IPV6);
 
 	/* Bind socket to interface and going promisc */
-	bind_socket_to_device(argv[1], raw, ETH_P_IPV6);
+	bind_socket_to_device(argv[1], raw);
 
 	/* Get number of packets to sniff from user */
 	packets_to_sniff = atoi(argv[2]);
 
 	/* Start Sniffing and print Hex of every packet */
 	while (packets_to_sniff--) {
-		if ((len = recvfrom(raw, packet_buffer, 2048, 0, (struct sockaddr*)&packet_info, &packet_info_size)) == -1) {
+		if ((len = recvfrom(raw, packet_buffer, 2048, 0,
+							(struct sockaddr*)&packet_info,
+							(socklen_t *)&packet_info_size)) == -1) {
 			perror("Recv from returned -1: ");
 			exit(-1);
 		} else {
-			/* Packet has been received successfully !! */
-			PrintPacketInHex(packet_buffer, len);
+			debug_packet(packet_buffer, len);
 		}
 	}
 
