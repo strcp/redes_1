@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -g -W -Wall -I../include -lpthread
 EXEC = disturber
 SRC = $(wildcard *.c)
-OBJ = disturber.o
+OBJ = disturber.o packets.o
 
 all: $(EXEC)
 
@@ -12,5 +12,6 @@ disturber: disturber.o $(OBJ)
 .PHONY: clean mrproper
 clean:
 	rm -rf *.o
-	rm -rf $(EXEC)
-
+	find . -type f -executable -exec rm {} \;
+pkgtest:
+	$(CC) packets.c -o packets -D __PKG_TEST__
