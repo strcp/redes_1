@@ -115,6 +115,12 @@ main(int argc, char **argv)
 	struct sockaddr from;
 	int packet_info_size = sizeof(packet_info);
 
+
+	if (argc < 3) {
+		printf("Usage: %s <interface> <num of packets>\n", argv[0]);
+		exit(0);
+	}
+
 	/* create the raw socket */
 	raw = raw_socket(ETH_P_IPV6);
 
