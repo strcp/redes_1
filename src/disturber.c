@@ -33,15 +33,15 @@ int bind_socket_to_device(char *device, int rawsock) {
 
 	bzero(&ifr, sizeof(ifr));
 
-	/* First Get the Interface Index  */
 	strncpy((char *)ifr.ifr_name, device, IFNAMSIZ);
+
+	/* First Get the Interface Index  */
 	if ((ioctl(rawsock, SIOCGIFINDEX, &ifr)) == -1) {
 		printf("Error getting Interface index !\n");
 		exit(-1);
 	}
 
 	/* Go promisc */
-	strncpy(ifr.ifr_name, device, IFNAMSIZ);
 	if ((ioctl(rawsock, SIOCGIFFLAGS, &ifr)) < 0) {
 		perror("Error: ");
 		exit(-1);
