@@ -38,17 +38,27 @@ int BindRawSocketToInterface(char *device, int rawsock, int protocol) {
 		printf("Error getting Interface index !\n");
 		exit(-1);
 	}
-
 	/* Bind our raw socket to this interface */
 	sll.sll_family = AF_PACKET;
 	sll.sll_ifindex = ifr.ifr_ifindex;
 	sll.sll_protocol = htons(protocol);
 
+	
+	if (ioctl(rawsock, SIOCGIFFLAGS, &ifr) == -1) {
+		printf("Error getting interface flags\n");
+		exit(-1);
+	}
+        ifr.ifr_flags |= IFF_PROMISC;
+        
+	if (ioctl(rawsock, SIOCSIFFLAGS, &ifr) == -1) {
+		printf("Error setting the interface flags\n");
+		exit(-1);
+	}
+	
 	if ((bind(rawsock, (struct sockaddr *)&sll, sizeof(sll))) == -1) {
 		perror("Error binding raw socket to interface\n");
 		exit(-1);
 	}
-
 	return 1;
 }
 
