@@ -15,6 +15,11 @@
 #include <netinet/ip6.h>
 #include <netinet/icmp6.h>
 #include <netinet/tcp.h>
+#include <netinet/ether.h>
+
+#define PRINTABLE_ETHADDR(dest, addr) sprintf(dest, \
+					"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", \
+					addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
 
 int raw_socket(int proto) {
 	int rawsock;
@@ -70,11 +75,25 @@ void debug_packet(unsigned char *packet, int len) {
 	struct ip6_hdr *ip6;
 	struct icmp6_hdr *icmpv6;
 	struct tcphdr *tcp;
-	char addr[INET6_ADDRSTRLEN];
+	char addr[INET6_ADDRSTRLEN], ethaddr[(ETH_ALEN * 2) + 5];
 
-	printf("\n- PACKET START (%d) -\n", len);
 
 	eth = (struct ethhdr *)packet;
+/*
+	if (ntohs(eth->h_proto) != ETH_P_IPV6) {
+		// Not an IPv6 packet! :-)
+		//printf("Not an IPv6 packet (%x)\n", ntohs(eth->h_proto));
+		return;
+	}
+*/
+	printf("\n- PACKET START (%d) -\n", len);
+
+	PRINTABLE_ETHADDR(ethaddr, eth->h_source);
+	printf("Ether src: %s\n", ethaddr);
+
+	PRINTABLE_ETHADDR(ethaddr, eth->h_dest);
+	printf("Ether dst: %s\n", ethaddr);
+
 	ip6 = (struct ip6_hdr *)(packet + sizeof(struct ethhdr));
 
 	if (ip6->ip6_dst.s6_addr) {
@@ -122,6 +141,9 @@ int main(int argc, char **argv) {
 	}
 
 	/* create the raw socket */
+	/* Maybe someday we will support other protocols */
+	//raw = raw_socket(ETH_P_ALL);
+
 	raw = raw_socket(ETH_P_IPV6);
 
 	/* Bind socket to interface and going promisc */
