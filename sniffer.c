@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <features.h>
 
 #include <sys/socket.h>
 #include <sys/ioctl.h>
@@ -10,8 +9,10 @@
 
 #include <linux/if_packet.h>
 #include <linux/if_ether.h>
+#include <linux/in.h>
 #include <linux/ipv6.h>
 #include <linux/icmpv6.h>
+#include <linux/tcp.h>
 
 
 int raw_socket(int proto) {
@@ -64,10 +65,10 @@ int bind_socket_to_device(char *device, int rawsock, int protocol) {
 }
 
 void PrintPacketInHex(unsigned char *packet, int len) {
-	unsigned char *p = packet;
 	struct ethhdr *eth;
 	struct ipv6hdr *ip6;
 	struct icmp6hdr *icmpv6;
+	struct tcphdr *tcp;
 	char addr[16];
 
 	printf("\n- PACKET START -\n");
@@ -93,20 +94,19 @@ void PrintPacketInHex(unsigned char *packet, int len) {
 			printf("ICMPv6 DEBUG:\n");
 			printf("Type: %d\n", icmpv6->icmp6_type);
 			break;
+		case IPPROTO_TCP:
+			tcp = (struct tcphdr *)((char *)ip6 + sizeof(struct ipv6hdr));
+			printf("TCP DEBUG:\n");
+			printf("Dest Port: %d\n", tcp->dest);
+			printf("Src Port: %d\n", tcp->source);
+			break;
 		default:
 			break;
 	}
-/*
-	while (len--) {
-		printf("%.2x ", *p);
-		p++;
-	}
-*/
 	printf("- PACKET END -\n\n");
 }
 
-main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
 	int raw;
 	unsigned char packet_buffer[2048];
 	int len;
@@ -143,5 +143,3 @@ main(int argc, char **argv)
 
 	return 0;
 }
-
-
