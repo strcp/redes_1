@@ -89,7 +89,7 @@ void debug_packet(unsigned char *packet, int len) {
 
 	eth = (struct ethhdr *)packet;
 	if (!in_cksum((unsigned char *)eth, vlen)) {
-		if(DEBUG)
+		if (DEBUG)
 			printf("eth: CRC ERROR\n");
 		return;
 	}

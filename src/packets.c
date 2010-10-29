@@ -5,28 +5,27 @@
 #include <netinet/ether.h>
 #include <netinet/ip6.h>
 
-unsigned char in_cksum(unsigned char *addr, int len)
-{
-        int nleft = len;
-        int sum = 0;
-        unsigned char *w = addr;
-        unsigned char answer = 0;
+unsigned char in_cksum(unsigned char *addr, int len) {
+	int nleft = len;
+	int sum = 0;
+	unsigned char *w = addr;
+	unsigned char answer = 0;
 
-        while (nleft > 1) {
-                sum += *w++;
-                nleft -= 2;
-        }
+	while (nleft > 1) {
+		sum += *w++;
+		nleft -= 2;
+	}
 
-        if (nleft == 1) {
-                *(unsigned char *)(&answer) = *(unsigned char *)w;
-                sum += answer;
-        }
+	if (nleft == 1) {
+		*(unsigned char *)(&answer) = *(unsigned char *)w;
+		sum += answer;
+	}
 
-        sum = (sum >> 16) + (sum & 0xFFFF);
-        sum += (sum >> 16);
-        answer = ~sum;
+	sum = (sum >> 16) + (sum & 0xFFFF);
+	sum += (sum >> 16);
+	answer = ~sum;
 
-        return (answer);
+	return (answer);
 }
 
 //WARN: needs to be freed
@@ -34,12 +33,12 @@ char *pkt2big() {
 	char *ret;
 	struct ethhdr *eth;
 	struct ip6_hdr *ip6;
-	
-	ret = (char *)malloc(sizeof(struct ethhdr) + 
+
+	ret = (char *)malloc(sizeof(struct ethhdr) +
 				sizeof(struct ip6_hdr));
-	
+
 	printf("\e[31mHeader Ethernet\n");
-	eth = (struct ethhdr *)ret;	
+	eth = (struct ethhdr *)ret;
 	memcpy(eth->h_source, (void *)ether_aton("00:00:00:00:CA:FE"), 6);
 	memcpy(eth->h_dest, (void *)ether_aton("00:00:03:00:CA:FE"), 6);
 	eth->h_proto = htons(0x86DD);
@@ -54,13 +53,13 @@ char *pkt2big() {
 }
 
 #ifdef __PKG_TEST__
-main(){
+main() {
 	int i;
 	char *pkt = pkt2big();
-		
-	for(i=0;i<sizeof(struct ethhdr);i++) {
+
+	for (i = 0; i < sizeof(struct ethhdr); i++) {
 		printf("%X", pkt[i]);
-		if(!((i+1)%10))
+		if (!((i + 1) % 10))
 			printf("\n");
 	}
 	printf("\n");
