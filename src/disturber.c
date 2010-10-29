@@ -17,7 +17,7 @@
 #include <netinet/tcp.h>
 #include <netinet/ether.h>
 
-#include "packets.h"
+#include <packets.h>
 
 #define DEBUG 0
 #define PRINTABLE_ETHADDR(dest, addr) sprintf(dest, \
@@ -45,19 +45,25 @@ int bind_socket_to_device(char *device, int rawsock) {
 
 	/* First Get the Interface Index  */
 	if ((ioctl(rawsock, SIOCGIFINDEX, &ifr)) == -1) {
-		printf("Error getting Interface index !\n");
+		perror("Error getting Interface index: ");
 		exit(-1);
 	}
 
 	/* Go promisc */
 	if ((ioctl(rawsock, SIOCGIFFLAGS, &ifr)) < 0) {
-		perror("Error: ");
+		perror("Error reading flags from device: ");
 		exit(-1);
 	}
 
 	ifr.ifr_flags |= IFF_PROMISC;
 	if ((ioctl(rawsock, SIOCSIFFLAGS, &ifr)) < 0) {
-		perror("Error: ");
+		perror("Error setting flags to device: ");
+		exit(-1);
+	}
+
+	/* Get hwaddr information */
+	if ((ioctl(rawsock, SIOCGIFHWADDR, &ifr)) == -1) {
+		perror("Error getting mac address information: ");
 		exit(-1);
 	}
 
