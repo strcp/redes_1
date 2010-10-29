@@ -6,7 +6,6 @@
 #include <ifaddrs.h>
 #include <unistd.h>
 
-
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <net/if.h>
@@ -108,7 +107,7 @@ void load_device_info(const char *dev_name) {
 	memcpy(device.hwaddr.ether_addr_octet, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
 }
 
-void dump_device_info(void) {
+static void dump_device_info(void) {
 	char host[255];
 
 	printf("- DEVICE DUMP -\n");
@@ -116,10 +115,10 @@ void dump_device_info(void) {
 	printf("Index: %i\n", device.index);
 	printf("Flags: 0x%X\n", device.ifa_flags);
 
-	inet_ntop(AF_INET6, &(device.ipv6.sin6_addr), host, sizeof(host));
+	inet_ntop(AF_INET6, &(device.ipv6.sin6_addr), host, 255);
 	printf("IPv6: %s\n", host);
 
-	inet_ntop(AF_INET, &(device.ipv4.sin_addr), host, sizeof(host));
+	inet_ntop(AF_INET, &(device.ipv4.sin_addr), host, 255);
 	printf("IPv4: %s\n", host);
 
 	printf("HWAddr: %s\n\n", ether_ntoa((struct ether_addr *)&device.hwaddr));
@@ -144,7 +143,6 @@ static int bind_socket_to_device(char *device, int rawsock) {
 		perror("Error setting flags to device: ");
 		exit(-1);
 	}
-
 
 	pkt = (struct packet_mreq *)malloc(sizeof(struct packet_mreq));
 	memset((struct packet_mreq *)pkt, 0, sizeof(struct packet_mreq));
@@ -180,6 +178,9 @@ void debug_packet(unsigned char *packet, int len) {
 	}
 */
 	printf("\n- PACKET START (%d) -\n", len);
+
+	if (memcmp(&device.hwaddr, eth->h_source, sizeof(struct ether_addr)) == 0)
+		printf("Packet for me? :-)\n");
 
 	printf("Ether src: %s\n", ether_ntoa((struct ether_addr *)eth->h_source));
 	printf("Ether dest: %s\n", ether_ntoa((struct ether_addr *)eth->h_dest));
