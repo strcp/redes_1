@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -Wall -ansi -lpthread
-EXEC = disturber 
+EXEC = disturber
 SRC = $(wildcard *.c)
 OBJ = $(SRC:.c=.o)
 
