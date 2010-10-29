@@ -1,4 +1,4 @@
-#ifdef __PKT__
+#ifndef __PKT__
 #define __PKT__
 
 unsigned char in_cksum(unsigned char *addr, int len);
