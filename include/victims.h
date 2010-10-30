@@ -2,9 +2,9 @@
 #include <netinet/ether.h>
 
 typedef struct victim {
-	struct sockaddr_in ipv4;
-	struct sockaddr_in6 ipv6;
 	struct ether_addr hwaddr;
+	struct in_addr ipv4;
+	struct in6_addr ipv6;
 	int poisoned;
 } victim;
 

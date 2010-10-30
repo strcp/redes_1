@@ -55,7 +55,7 @@ char *alloc_pkt2big() {
 
 	/* IPv6 Header */
 	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
-	ip6->ip6_dst = svictim.ipv6.sin6_addr;
+	ip6->ip6_dst = svictim.ipv6;
 
 	inet_ntop(AF_INET6, &svictim.ipv6, addr, INET6_ADDRSTRLEN);
 	printf("DEBUG: %s\n", addr);
