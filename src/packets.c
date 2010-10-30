@@ -41,7 +41,6 @@ char *alloc_pkt2big() {
 	struct ip6_hdr *ip6;
 	struct icmp6_hdr *icmp6;
 	char *packet;
-	char addr[INET6_ADDRSTRLEN];
 
 	packet = malloc(sizeof(struct ethhdr) +
 					sizeof(struct ip6_hdr) +
@@ -56,10 +55,6 @@ char *alloc_pkt2big() {
 	/* IPv6 Header */
 	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
 	ip6->ip6_dst = svictim.ipv6;
-
-	inet_ntop(AF_INET6, &svictim.ipv6, addr, INET6_ADDRSTRLEN);
-	printf("DEBUG: %s\n", addr);
-
 
 	/* ICMPv6 Header */
 	icmp6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
