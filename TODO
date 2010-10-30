@@ -1,0 +1,4 @@
+- Função para criar os pacotes que devem ser enviados (TOO_BIG, ADVERTISE..)
+- O Poison deve ser feito em ambos os lados? (para o client e para o server vitima)?
+- Popular a struct svictim com os dados do server vitima.
+	- Fazer um Neighbor Discovery para pegar o mac address do server vitima.
