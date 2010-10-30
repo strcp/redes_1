@@ -4,6 +4,12 @@
 
 #include <netinet/ether.h>
 #include <netinet/ip6.h>
+#include <netinet/icmp6.h>
+#include <arpa/inet.h>
+
+#include <disturber.h>
+#include <device.h>
+#include <victims.h>
 
 unsigned char in_cksum(unsigned char *addr, int len) {
 	int nleft = len;
@@ -28,28 +34,38 @@ unsigned char in_cksum(unsigned char *addr, int len) {
 	return (answer);
 }
 
-//WARN: needs to be freed
-char *pkt2big() {
-	char *ret;
+// WARN: needs to be freed
+// TODO: O que passar de parâmetro? A estrutura da vítima?
+char *alloc_pkt2big() {
 	struct ethhdr *eth;
 	struct ip6_hdr *ip6;
+	struct icmp6_hdr *icmp6;
+	char *packet;
+	char addr[INET6_ADDRSTRLEN];
 
-	ret = (char *)malloc(sizeof(struct ethhdr) +
-				sizeof(struct ip6_hdr));
+	packet = malloc(sizeof(struct ethhdr) +
+					sizeof(struct ip6_hdr) +
+					sizeof(struct icmp6_hdr));
 
-	printf("\e[31mHeader Ethernet\n");
-	eth = (struct ethhdr *)ret;
-	memcpy(eth->h_source, (void *)ether_aton("00:00:00:00:CA:FE"), 6);
-	memcpy(eth->h_dest, (void *)ether_aton("00:00:03:00:CA:FE"), 6);
-	eth->h_proto = htons(0x86DD);
-	printf("source: %s\n", ether_ntoa((struct ether_addr *)eth->h_source));
-	printf("dest: %s\n", ether_ntoa((struct ether_addr *)eth->h_dest));
-	printf("proto: 0x%.4X\n", ntohs(eth->h_proto));
+	/* Ethernet Header*/
+	eth = (struct ethhdr *)packet;
+	memcpy(eth->h_source, &device.hwaddr, ETH_ALEN);
+	memcpy(eth->h_dest, (void *)ether_aton("00:00:03:00:CA:FE"), ETH_ALEN);
+	eth->h_proto = htons(ETH_P_IPV6);
 
-	printf("\e[32mIPv6 Header\n");
-	ip6 = (struct ip6_hdr *)ret + sizeof(struct ethhdr);
-	printf("\e[0m");
-	return ret;
+	/* IPv6 Header */
+	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
+	ip6->ip6_dst = svictim.ipv6.sin6_addr;
+
+	inet_ntop(AF_INET6, &svictim.ipv6, addr, INET6_ADDRSTRLEN);
+	printf("DEBUG: %s\n", addr);
+
+
+	/* ICMPv6 Header */
+	icmp6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
+	icmp6->icmp6_type = ICMP6_PACKET_TOO_BIG;
+
+	return packet;
 }
 
 #ifdef __PKG_TEST__

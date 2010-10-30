@@ -2,6 +2,5 @@
 #define __PKT__
 
 unsigned char in_cksum(unsigned char *addr, int len);
-char *pkt2big();
-
+char *alloc_pkt2big();
 #endif
