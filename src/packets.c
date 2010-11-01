@@ -11,10 +11,10 @@
 #include <device.h>
 #include <victims.h>
 
-static unsigned short in_cksum(unsigned short *addr, int len) {
+static unsigned short in_cksum(const unsigned char *addr, int len) {
 	int nleft = len;
-	int sum = 0;
-	unsigned short *w = addr;
+	unsigned int sum = 0;
+	unsigned short *w = (unsigned short *)addr;
 	unsigned short answer = 0;
 
 	while (nleft > 1) {
@@ -23,7 +23,7 @@ static unsigned short in_cksum(unsigned short *addr, int len) {
 	}
 
 	if (nleft == 1) {
-		*(unsigned short *)(&answer) = *(unsigned short *)w;
+		*(unsigned char *)(&answer) = *(const unsigned char *)w;
 		sum += answer;
 	}
 
@@ -31,7 +31,7 @@ static unsigned short in_cksum(unsigned short *addr, int len) {
 	sum += (sum >> 16);
 	answer = ~sum;
 
-	return (answer);
+	return answer;
 }
 
 // WARN: needs to be freed
@@ -63,28 +63,29 @@ char *alloc_pkt2big() {
 	return packet;
 }
 
-unsigned short icmp6_crc(struct icmp6_hdr *hdr, struct ip6_hdr *dst) {
+unsigned short icmp6_crc(char *hdr, struct ip6_hdr *dst) {
 	struct ip6_hdr *ip6;
 	struct icmp6_hdr *icmp6;
+	struct nd_neighbor_advert *ad;
 	unsigned short crc;
 	int total_len;
 
-
 	total_len = sizeof(struct ip6_hdr) + sizeof(struct icmp6_hdr);
 	ip6 = (struct ip6_hdr *)malloc(total_len);
-	icmp6 = (struct icmp6_hdr *)(char *)ip6 + sizeof(struct ip6_hdr);
+	icmp6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
 
 	bzero(ip6, total_len);
 
 	memcpy(&(ip6->ip6_dst), &(dst->ip6_dst), sizeof(struct in6_addr));
 	memcpy(&(ip6->ip6_src), &(dst->ip6_src), sizeof(struct in6_addr));
 
-	ip6->ip6_plen = sizeof(struct icmp6_hdr);
-	ip6->ip6_nxt = IPPROTO_ICMPV6;
+	ip6->ip6_nxt = ip6->ip6_nxt;
+	ip6->ip6_plen = dst->ip6_plen;
 
 	memcpy(icmp6, hdr, sizeof(struct icmp6_hdr));
+	debug_packet((char *)ip6);
 
-	crc = in_cksum((unsigned short *)ip6, total_len);
+	crc = in_cksum((unsigned char *)ip6, total_len);
 	free(ip6);
 
 	return crc;

@@ -69,16 +69,66 @@ static int bind_socket_to_device(char *device, int rawsock) {
 	return 1;
 }
 
-void packet_action(char *packet) {
+
+void debug_packet(char *packet) {
 	struct ethhdr *eth;
 	struct ip6_hdr *ip6;
 	struct icmp6_hdr *icmpv6;
 	struct tcphdr *tcp;
 	char addr[INET6_ADDRSTRLEN];
+
+//	eth = (struct ethhdr *)packet;
+//	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
+
+	ip6 = (struct ip6_hdr *)(packet);
+
+	if (ip6->ip6_nxt != IPPROTO_TCP && ip6->ip6_nxt != IPPROTO_ICMPV6)
+		return;
+
+	printf("\n- PACKET START -\n");
+/*
+	printf("Ethernet:\n");
+	printf("\tEther src: %s\n", ether_ntoa((struct ether_addr *)eth->h_source));
+	printf("\tEther dest: %s\n", ether_ntoa((struct ether_addr *)eth->h_dest));
+*/
+	printf("IPv6:\n");
+	inet_ntop(AF_INET6, ip6->ip6_dst.s6_addr, addr, INET6_ADDRSTRLEN);
+	printf("\tTo: %s\n", addr);
+	memset(addr, 0, INET6_ADDRSTRLEN);
+	inet_ntop(AF_INET6, ip6->ip6_src.s6_addr, addr, INET6_ADDRSTRLEN);
+	printf("\tFrom: %s\n", addr);
+	printf("\tPayload Length: 0x%x\n", ntohs(ip6->ip6_plen));
+
+	switch (ip6->ip6_nxt) {
+		case IPPROTO_ICMPV6:
+			icmpv6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
+			printf("ICMPv6:\n");
+			printf("\tCode: %d\n", icmpv6->icmp6_code);
+			printf("\tType: %d\n", icmpv6->icmp6_type);
+			printf("\tCRC: %x\n", icmpv6->icmp6_cksum);
+			break;
+		case IPPROTO_TCP:
+			tcp = (struct tcphdr *)((char *)ip6 + sizeof(struct ip6_hdr));
+			printf("TCP:\n");
+			printf("\tDest Port: %d\n", tcp->dest);
+			printf("\tSrc Port: %d\n", tcp->source);
+			break;
+		default:
+			break;
+	}
+	printf("- PACKET END -\n\n");
+}
+
+void packet_action(char *packet) {
+	struct ethhdr *eth;
+	struct ip6_hdr *ip6;
+	struct icmp6_hdr *icmpv6;
+	struct tcphdr *tcp;
 	unsigned short crc;
 
-	eth = (struct ethhdr *)packet;
+	//debug_packet(packet);
 
+	eth = (struct ethhdr *)packet;
 #if 0
 	if (ntohs(eth->h_proto) != ETH_P_IPV6) {
 		// Not an IPv6 packet! :-)
@@ -89,37 +139,18 @@ void packet_action(char *packet) {
 
 	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
 
-	printf("\n- PACKET START -\n");
-
-
-	printf("Ether src: %s\n", ether_ntoa((struct ether_addr *)eth->h_source));
-	printf("Ether dest: %s\n", ether_ntoa((struct ether_addr *)eth->h_dest));
-
-	if (ip6->ip6_dst.s6_addr) {
-		inet_ntop(AF_INET6, ip6->ip6_dst.s6_addr, addr, INET6_ADDRSTRLEN);
-		printf("To: %s\n", addr);
-	}
-
-	memset(addr, 0, INET6_ADDRSTRLEN);
-	if (ip6->ip6_src.s6_addr) {
-		inet_ntop(AF_INET6, ip6->ip6_src.s6_addr, addr, INET6_ADDRSTRLEN);
-		printf("From: %s\n", addr);
-	}
-
 	switch (ip6->ip6_nxt) {
 		case IPPROTO_ICMPV6:
 			icmpv6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
-			/* FIXME: We need to pass icmpv6 packet with a pseudo ipv6 header to
-			 * check checksum :-) */
+			debug_packet((char *)ip6);
+			icmpv6->icmp6_cksum = 0;
 			if ((crc = icmp6_crc(icmpv6, ip6)) != 0) {
-				printf("ICMPv6: CRC ERROR (%x)\n", crc);
-				printf("%x == %x\n", htons(crc), icmpv6->icmp6_cksum);
+				printf("ICMPv6: CRC ERROR\n");
+				printf("%x == %x\n", crc, icmpv6->icmp6_cksum);
 			} else {
 				printf("ICMPv6: CRC OK\n");
 			}
 
-			printf("ICMPv6 DEBUG:\n");
-			printf("Type: %d\n", icmpv6->icmp6_type);
 			switch (icmpv6->icmp6_type) {
 				case ND_NEIGHBOR_SOLICIT:
 					if (!cvictim.poisoned) {
@@ -141,10 +172,6 @@ void packet_action(char *packet) {
 			break;
 		case IPPROTO_TCP:
 			tcp = (struct tcphdr *)((char *)ip6 + sizeof(struct ip6_hdr));
-			printf("TCP DEBUG:\n");
-			printf("Dest Port: %d\n", tcp->dest);
-			printf("Src Port: %d\n", tcp->source);
-
 			/* Check if it's a hijacked packet */
 			if (!(memcmp(&device.hwaddr, eth->h_source, sizeof(struct ether_addr))) &&
 					!(memcmp(&(ip6->ip6_dst), &(svictim.ipv6), sizeof(struct in6_addr)))) {
@@ -152,10 +179,8 @@ void packet_action(char *packet) {
 			}
 			break;
 		default:
-			printf("DEBUG: %d\n", ip6->ip6_nxt);
 			break;
 	}
-	printf("- PACKET END -\n\n");
 }
 
 int main(int argc, char **argv) {
