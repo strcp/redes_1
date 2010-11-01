@@ -11,11 +11,11 @@
 #include <device.h>
 #include <victims.h>
 
-unsigned char in_cksum(unsigned char *addr, int len) {
+static unsigned short in_cksum(unsigned short *addr, int len) {
 	int nleft = len;
 	int sum = 0;
-	unsigned char *w = addr;
-	unsigned char answer = 0;
+	unsigned short *w = addr;
+	unsigned short answer = 0;
 
 	while (nleft > 1) {
 		sum += *w++;
@@ -23,7 +23,7 @@ unsigned char in_cksum(unsigned char *addr, int len) {
 	}
 
 	if (nleft == 1) {
-		*(unsigned char *)(&answer) = *(unsigned char *)w;
+		*(unsigned short *)(&answer) = *(unsigned short *)w;
 		sum += answer;
 	}
 
@@ -61,6 +61,33 @@ char *alloc_pkt2big() {
 	icmp6->icmp6_type = ICMP6_PACKET_TOO_BIG;
 
 	return packet;
+}
+
+unsigned short icmp6_crc(struct icmp6_hdr *hdr, struct ip6_hdr *dst) {
+	struct ip6_hdr *ip6;
+	struct icmp6_hdr *icmp6;
+	unsigned short crc;
+	int total_len;
+
+
+	total_len = sizeof(struct ip6_hdr) + sizeof(struct icmp6_hdr);
+	ip6 = (struct ip6_hdr *)malloc(total_len);
+	icmp6 = (struct icmp6_hdr *)(char *)ip6 + sizeof(struct ip6_hdr);
+
+	bzero(ip6, total_len);
+
+	memcpy(&(ip6->ip6_dst), &(dst->ip6_dst), sizeof(struct in6_addr));
+	memcpy(&(ip6->ip6_src), &(dst->ip6_src), sizeof(struct in6_addr));
+
+	ip6->ip6_plen = sizeof(struct icmp6_hdr);
+	ip6->ip6_nxt = IPPROTO_ICMPV6;
+
+	memcpy(icmp6, hdr, sizeof(struct icmp6_hdr));
+
+	crc = in_cksum((unsigned short *)ip6, total_len);
+	free(ip6);
+
+	return crc;
 }
 
 #ifdef __PKG_TEST__

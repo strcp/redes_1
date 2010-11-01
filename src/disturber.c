@@ -75,6 +75,7 @@ void packet_action(char *packet) {
 	struct icmp6_hdr *icmpv6;
 	struct tcphdr *tcp;
 	char addr[INET6_ADDRSTRLEN];
+	unsigned short crc;
 
 	eth = (struct ethhdr *)packet;
 
@@ -110,8 +111,9 @@ void packet_action(char *packet) {
 			icmpv6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
 			/* FIXME: We need to pass icmpv6 packet with a pseudo ipv6 header to
 			 * check checksum :-) */
-			if (in_cksum((unsigned char *)ip6, sizeof(struct ip6_hdr) + sizeof(struct icmp6_hdr)) != 0) {
-				printf("ICMPv6: CRC ERROR\n");
+			if ((crc = icmp6_crc(icmpv6, ip6)) != 0) {
+				printf("ICMPv6: CRC ERROR (%x)\n", crc);
+				printf("%x == %x\n", htons(crc), icmpv6->icmp6_cksum);
 			} else {
 				printf("ICMPv6: CRC OK\n");
 			}
