@@ -90,12 +90,9 @@ void packet_action(char *packet) {
 
 	printf("\n- PACKET START -\n");
 
-	if (memcmp(&device.hwaddr, eth->h_source, sizeof(struct ether_addr)) == 0)
-		printf("Packet for me? :-)\n");
 
 	printf("Ether src: %s\n", ether_ntoa((struct ether_addr *)eth->h_source));
 	printf("Ether dest: %s\n", ether_ntoa((struct ether_addr *)eth->h_dest));
-
 
 	if (ip6->ip6_dst.s6_addr) {
 		inet_ntop(AF_INET6, ip6->ip6_dst.s6_addr, addr, INET6_ADDRSTRLEN);
@@ -121,19 +118,36 @@ void packet_action(char *packet) {
 
 			printf("ICMPv6 DEBUG:\n");
 			printf("Type: %d\n", icmpv6->icmp6_type);
-			/*
-			if (icmpv6->icmp6_type == ND_NEIGHBOR_SOLICIT && cvictim.poisoned == 0)
-				if (solicitation_to_svictim(icmpv6)) {
-					cvictim.poisoned = 1;
-					poison_cvictim(ip6->ip6_src.s6_addr);	// This should be a thread
-				}
-			*/
+			switch (icmpv6->icmp6_type) {
+				case ND_NEIGHBOR_SOLICIT:
+					if (!cvictim.poisoned) {
+						printf("Start poisoning..\n");
+						/* TODO:
+						if (solicitation_to_svictim(icmpv6)) {
+							cvictim.poisoned = 1;
+							poison_cvictim(ip6->ip6_src.s6_addr);	// This should be a thread
+						}
+						*/
+					}
+					break;
+				case ND_NEIGHBOR_ADVERT:
+					/* TODO: Get server's hwaddr */
+					break;
+				default:
+					break;
+			}
 			break;
 		case IPPROTO_TCP:
 			tcp = (struct tcphdr *)((char *)ip6 + sizeof(struct ip6_hdr));
 			printf("TCP DEBUG:\n");
 			printf("Dest Port: %d\n", tcp->dest);
 			printf("Src Port: %d\n", tcp->source);
+
+			/* Check if it's a hijacked packet */
+			if (!(memcmp(&device.hwaddr, eth->h_source, sizeof(struct ether_addr))) &&
+					!(memcmp(&(ip6->ip6_dst), &(svictim.ipv6), sizeof(struct in6_addr)))) {
+				printf("Packet Hijacked? :-)\n");
+			}
 			break;
 		default:
 			printf("DEBUG: %d\n", ip6->ip6_nxt);
