@@ -135,8 +135,6 @@ void debug_cvivtim(struct victim *cli) {
 struct cli_victim *get_cvictim(struct ethhdr *eth) {
 	struct cli_victim *cli;
 	struct ip6_hdr *ip6;
-	if(!memcmp(&svictim.hwaddr, 0, sizeof(struct ether_addr)))
-		memcpy(&svictim.hwaddr, eth->h_dest, ETH_ALEN);
 	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
 	for(cli = cvictim; cli; cli = cli->nxt) {
 		printf("entrei");
@@ -182,7 +180,6 @@ void packet_action(char *packet) {
 		return;
 	}
 #endif
-
 	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
 //	!(memcmp(&(ip6->ip6_dst), &(svictim.ipv6), sizeof(struct in6_addr)))
 //	debug_packet((char*)ip6);
@@ -287,6 +284,7 @@ int main(int argc, char **argv) {
 	while ((len = recvfrom(raw, packet_buffer, 2048, 0,
 						(struct sockaddr*)&packet_info,
 						(socklen_t *)&packet_info_size)) >= 0) {
+			debug_packet((char *)packet_buffer+sizeof(struct ethhdr *));
 			packet_action(packet_buffer);
 	}
 
