@@ -24,3 +24,8 @@ typedef struct cli_victim {
 #endif
 struct victim svictim;
 struct cli_victim *cvictim;
+
+void init_cvictim();
+void debug_cvivtim(struct victim *cli);
+struct cli_victim *get_cvictim(struct ethhdr *eth);
+

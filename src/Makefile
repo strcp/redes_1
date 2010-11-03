@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -g -W -Wall -I../include -lpthread
 EXEC = disturber
 SRC = $(wildcard *.c)
-OBJ = device.o packets.o disturber.o
+OBJ = device.o packets.o disturber.o victims.c
 
 all: $(EXEC)
 

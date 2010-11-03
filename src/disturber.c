@@ -5,6 +5,7 @@
 #include <netdb.h>
 #include <ifaddrs.h>
 #include <unistd.h>
+#include <packets.h>
 
 #include <sys/socket.h>
 #include <sys/ioctl.h>
@@ -22,7 +23,6 @@
 
 #include <pthread.h>
 #include <victims.h>
-#include <packets.h>
 #include <device.h>
 
 #define DEBUG 0
@@ -120,57 +120,6 @@ void debug_packet(char *packet) {
 	printf("- PACKET END -\n\n");
 }
 
-void init_cvictim() {
-	cvictim = NULL;
-}
-
-void debug_cvivtim(struct victim *cli) {
-	char buf[INET6_ADDRSTRLEN];
-
-	printf("HWADDR: %s\n", ether_ntoa(&(cli->hwaddr)));
-	memset(buf, 0, INET6_ADDRSTRLEN);
-	inet_ntop(AF_INET6, cli->ipv6.s6_addr, buf, INET6_ADDRSTRLEN);
-	printf("IPv6: %s\n", buf);
-}
-
-struct cli_victim *get_cvictim(struct ethhdr *eth) {
-	struct cli_victim *cli;
-	struct ip6_hdr *ip6;
-
-	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
-
-	for (cli = cvictim; cli; cli = cli->nxt) {
-		printf("entrei");
-		if (memcmp(&(cli->cv_victim.hwaddr), &(eth->h_source),
-							sizeof(struct ether_addr)) == 0) {
-			printf("Cliente existente\n");
-
-			return cli;
-		}
-	}
-
-	printf("Cliente inexistente\n");
-
-	cli = cvictim;
-	cvictim = (struct cli_victim *)malloc(sizeof(struct cli_victim));
-	cvictim->nxt = cli;
-
-	memcpy(&(cvictim->cv_victim.hwaddr), &(eth->h_source), ETH_ALEN);
-	//cvictim->cv_victim.ipv4
-	memcpy(&(cvictim->cv_victim.ipv6), &(ip6->ip6_src), INET6_ADDRSTRLEN);
-	cvictim->cv_victim.poisoned = 0;
-	//cvictim->th = (struct pthread_t *)malloc(sizeof(struct pthread_t));
-
-	return cvictim;
-}
-
-void *th_func(void *conn) {
-	//poisoning
-	printf("oiaeu\n");
-
-	pthread_exit((void*)EXIT_SUCCESS);
-}
-
 void packet_action(char *packet) {
 	struct ethhdr *eth;
 	struct ip6_hdr *ip6;
@@ -182,13 +131,6 @@ void packet_action(char *packet) {
 	//debug_packet(packet);
 
 	eth = (struct ethhdr *)packet;
-#if 0
-	if (ntohs(eth->h_proto) != ETH_P_IPV6) {
-		// Not an IPv6 packet! :-)
-		//printf("Not an IPv6 packet (%x)\n", ntohs(eth->h_proto));
-		return;
-	}
-#endif
 	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
 
 	/* Pacote para nossa vitima. */
@@ -215,7 +157,6 @@ void packet_action(char *packet) {
 			}
 		}
 	}
-
 
 #if 0
 		cli = get_cvictim(eth);
@@ -293,8 +234,6 @@ int main(int argc, char **argv) {
 	dump_device_info();
 	init_cvictim();
 	/* create the raw socket */
-	/* Maybe someday we will support other protocols */
-	//raw = raw_socket(ETH_P_ALL);
 	raw = raw_socket(ETH_P_IPV6);
 
 	/* Bind socket to interface and going promisc */
