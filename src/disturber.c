@@ -159,7 +159,8 @@ struct cli_victim *get_cvictim(struct ethhdr *eth) {
 void *th_func(void *conn) {
 	//poisoning
 	printf("oiaeu\n");
-	return;
+
+	pthread_exit((void*)EXIT_SUCCESS);
 }
 
 void packet_action(char *packet) {
