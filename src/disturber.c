@@ -136,9 +136,10 @@ struct cli_victim *get_cvictim(struct ethhdr *eth) {
 	struct cli_victim *cli;
 	struct ip6_hdr *ip6;
 	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
-	for(cli = cvictim; cli; cli = cli->nxt) {
+	for (cli = cvictim; cli; cli = cli->nxt) {
 		printf("entrei");
-		if(memcmp(&(cli->cv_victim.hwaddr), &(eth->h_source), sizeof(struct ether_addr)) == 0) {
+		if (memcmp(&(cli->cv_victim.hwaddr), &(eth->h_source),
+							sizeof(struct ether_addr)) == 0) {
 			printf("Cliente existente\n");
 			return cli;
 		}
@@ -156,9 +157,8 @@ struct cli_victim *get_cvictim(struct ethhdr *eth) {
 }
 
 void *th_func(void *conn) {
-
 	//poisoning
-	printf("oiaeu\n");	
+	printf("oiaeu\n");
 	return;
 }
 
@@ -185,14 +185,15 @@ void packet_action(char *packet) {
 //	debug_packet((char*)ip6);
 	if (memcmp(&(ip6->ip6_dst), &(svictim.ipv6), sizeof(struct in6_addr)) == 0) {
 		cli = get_cvictim(eth);
+
 		printf("\e[32mDebug Cliente\n");
 		debug_cvivtim(&cli->cv_victim);
 		printf("Debug Vitima\n");
 		debug_cvivtim(&svictim);
 		printf("\e[0m");
-		if(pthread_create(&(cli->th), 0, &th_func, cli)) {
-			printf("Error creating thread\n");
 
+		if (pthread_create(&(cli->th), 0, &th_func, cli)) {
+			printf("Error creating thread\n");
 			//printf("Client: %s", );
 		}
 	}
@@ -202,7 +203,7 @@ void packet_action(char *packet) {
 			icmpv6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
 			debug_packet((char *)ip6);
 			icmpv6->icmp6_cksum = 0;
-			if ((crc = icmp6_crc(icmpv6, ip6)) != 0) {		
+			if ((crc = icmp6_crc(icmpv6, ip6)) != 0) {
 				printf("ICMPv6: CRC ERROR\n");
 				printf("%x == %x\n", crc, icmpv6->icmp6_cksum);
 			} else {
