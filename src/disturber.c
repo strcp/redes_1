@@ -182,9 +182,34 @@ void packet_action(char *packet) {
 	}
 #endif
 	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
-//	!(memcmp(&(ip6->ip6_dst), &(svictim.ipv6), sizeof(struct in6_addr)))
-//	debug_packet((char*)ip6);
-	if (memcmp(&(ip6->ip6_dst), &(svictim.ipv6), sizeof(struct in6_addr)) == 0) {
+
+	/* Pacote para nossa vitima. */
+	if (!memcmp(&(ip6->ip6_dst), &(svictim.ipv6), sizeof(struct in6_addr))) {
+		/* Se o mac destino for o do atacante, é pacote roubado */
+		if (memcmp(&(eth->h_dest), &(device.hwaddr), ETH_ALEN) == 0) {
+			/* TODO */
+			printf("Packet Hijacked? :-)\n");
+		} else if (ip6->ip6_nxt == IPPROTO_ICMPV6) {
+			icmpv6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
+			/* Se for uma solicitação de discover e o cliente ainda não foi
+			 * "poisoned", dispara o poison. */
+			if (icmpv6->icmp6_type == ND_NEIGHBOR_SOLICIT) {
+				/* TODO */
+				printf("Thread de poison para o client.\n");
+			}
+		}
+	} else if (!memcmp(&(ip6->ip6_src), &(svictim.ipv6), sizeof(struct in6_addr))) {
+		/* Pacote enviado pela nossa vitima. */
+		if (ip6->ip6_nxt == IPPROTO_ICMPV6) {
+			icmpv6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
+			if (icmpv6->icmp6_type == ND_NEIGHBOR_ADVERT) {
+				printf("Se não tivermos pegado o MAC do server, esse é o momento.\n");
+			}
+		}
+	}
+
+
+#if 0
 		cli = get_cvictim(eth);
 
 		printf("\e[32mDebug Cliente\n");
@@ -198,6 +223,7 @@ void packet_action(char *packet) {
 			//printf("Client: %s", );
 		}
 	}
+#endif
 #if 0
 	switch (ip6->ip6_nxt) {
 		case IPPROTO_ICMPV6:
@@ -235,7 +261,6 @@ void packet_action(char *packet) {
 			/* Check if it's a hijacked packet */
 			if (!(memcmp(&device.hwaddr, eth->h_source, sizeof(struct ether_addr))) &&
 					!(memcmp(&(ip6->ip6_dst), &(svictim.ipv6), sizeof(struct in6_addr)))) {
-				printf("Packet Hijacked? :-)\n");
 			}
 			break;
 		default:
