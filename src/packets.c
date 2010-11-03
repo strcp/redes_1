@@ -62,6 +62,20 @@ char *alloc_pkt2big() {
 
 	return packet;
 }
+unsigned short icmp6_cksum(struct ip6_hdr *ip6) {
+	union{
+		struct {
+			struct in6_addr ph_src;
+			struct in6_addr ph_dst;
+			u_int32_t       ph_len;
+			u_int8_t        ph_zero[3];
+			u_int8_t        ph_nxt;
+		} ph;
+		u_int16_t pa[20];
+	} phu;
+	memcpy(&phu.ph.ph_src,&(ip6->ip6_src), sizeof(struct in6_addr));
+	return 0;
+}
 
 unsigned short icmp6_crc(char *hdr, struct ip6_hdr *dst) {
 	struct ip6_hdr *ip6;
