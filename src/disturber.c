@@ -20,6 +20,7 @@
 #include <netinet/tcp.h>
 #include <netinet/ether.h>
 
+#include <pthread.h>
 #include <victims.h>
 #include <packets.h>
 #include <device.h>
@@ -119,12 +120,57 @@ void debug_packet(char *packet) {
 	printf("- PACKET END -\n\n");
 }
 
+void init_cvictim() {
+	cvictim = NULL;
+}
+
+void debug_cvivtim(struct victim *cli) {
+	char buf[INET6_ADDRSTRLEN];
+	printf("HWADDR: %s\n", ether_ntoa(&(cli->hwaddr)));
+	memset(buf, 0, INET6_ADDRSTRLEN);
+	inet_ntop(AF_INET6, cli->ipv6.s6_addr, buf, INET6_ADDRSTRLEN);
+	printf("IPv6: %s\n", buf);
+}
+
+struct cli_victim *get_cvictim(struct ethhdr *eth) {
+	struct cli_victim *cli;
+	struct ip6_hdr *ip6;
+	if(!memcmp(&svictim.hwaddr, 0, sizeof(struct ether_addr)))
+		memcpy(&svictim.hwaddr, eth->h_dest, ETH_ALEN);
+	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
+	for(cli = cvictim; cli; cli = cli->nxt) {
+		printf("entrei");
+		if(memcmp(&(cli->cv_victim.hwaddr), &(eth->h_source), sizeof(struct ether_addr)) == 0) {
+			printf("Cliente existente\n");
+			return cli;
+		}
+	}
+	printf("Cliente inexistente\n");
+	cli = cvictim;
+	cvictim = (struct cli_victim *)malloc(sizeof(struct cli_victim));
+	cvictim->nxt = cli;
+	memcpy(&(cvictim->cv_victim.hwaddr), &(eth->h_source), ETH_ALEN);
+	//cvictim->cv_victim.ipv4
+	memcpy(&(cvictim->cv_victim.ipv6), &(ip6->ip6_src), INET6_ADDRSTRLEN);
+	cvictim->cv_victim.poisoned = 0;
+	//cvictim->th = (struct pthread_t *)malloc(sizeof(struct pthread_t));
+	return cvictim;
+}
+
+void *th_func(void *conn) {
+
+	//poisoning
+	printf("oiaeu\n");	
+	return;
+}
+
 void packet_action(char *packet) {
 	struct ethhdr *eth;
 	struct ip6_hdr *ip6;
 	struct icmp6_hdr *icmpv6;
 	struct tcphdr *tcp;
 	unsigned short crc;
+	struct cli_victim *cli;
 
 	//debug_packet(packet);
 
@@ -138,13 +184,28 @@ void packet_action(char *packet) {
 #endif
 
 	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
+//	!(memcmp(&(ip6->ip6_dst), &(svictim.ipv6), sizeof(struct in6_addr)))
+//	debug_packet((char*)ip6);
+	if (memcmp(&(ip6->ip6_dst), &(svictim.ipv6), sizeof(struct in6_addr)) == 0) {
+		cli = get_cvictim(eth);
+		printf("\e[32mDebug Cliente\n");
+		debug_cvivtim(&cli->cv_victim);
+		printf("Debug Vitima\n");
+		debug_cvivtim(&svictim);
+		printf("\e[0m");
+		if(pthread_create(&(cli->th), 0, &th_func, cli)) {
+			printf("Error creating thread\n");
 
+			//printf("Client: %s", );
+		}
+	}
+#if 0
 	switch (ip6->ip6_nxt) {
 		case IPPROTO_ICMPV6:
 			icmpv6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
 			debug_packet((char *)ip6);
 			icmpv6->icmp6_cksum = 0;
-			if ((crc = icmp6_crc(icmpv6, ip6)) != 0) {
+			if ((crc = icmp6_crc(icmpv6, ip6)) != 0) {		
 				printf("ICMPv6: CRC ERROR\n");
 				printf("%x == %x\n", crc, icmpv6->icmp6_cksum);
 			} else {
@@ -181,6 +242,7 @@ void packet_action(char *packet) {
 		default:
 			break;
 	}
+#endif
 }
 
 int main(int argc, char **argv) {
@@ -197,7 +259,7 @@ int main(int argc, char **argv) {
 
 	load_device_info(argv[1]);
 	dump_device_info();
-
+	init_cvictim();
 	/* create the raw socket */
 	/* Maybe someday we will support other protocols */
 	//raw = raw_socket(ETH_P_ALL);
