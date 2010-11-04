@@ -76,6 +76,7 @@ unsigned short icmp6_cksum(struct ip6_hdr *ip6) {
 	struct icmp6_hdr *icmp6, *tmp;
 	struct pseudo_header *ph;
 
+	//TODO: Check for memory overrun
 	buf = malloc(sizeof(struct pseudo_header) + ntohs(ip6->ip6_plen));
 	memset(buf, 0, sizeof(struct pseudo_header) + ntohs(ip6->ip6_plen));
 	ph = (struct pseudo_header *)buf;
