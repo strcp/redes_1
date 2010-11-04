@@ -76,21 +76,20 @@ unsigned short icmp6_cksum(struct ip6_hdr *ip6) {
 	struct icmp6_hdr *icmp6, *tmp;
 	struct pseudo_header *ph;
 
-	buf = malloc(sizeof(struct pseudo_header) + ip6->ip6_plen);
-	memset(buf, 0, sizeof(struct pseudo_header) + ip6->ip6_plen);
+	buf = malloc(sizeof(struct pseudo_header) + ntohs(ip6->ip6_plen));
+	memset(buf, 0, sizeof(struct pseudo_header) + ntohs(ip6->ip6_plen));
 	ph = (struct pseudo_header *)buf;
 	icmp6 = (struct icmp6_hdr *)((char *)buf + sizeof(struct ip6_hdr));
 
-	ph->ph_src = ip6->ip6_src;
-	ph->ph_dst = ip6->ip6_dst;
+	memcpy(&(ph->ph_src), &(ip6->ip6_src), sizeof(struct in6_addr));
+	memcpy(&(ph->ph_dst), &(ip6->ip6_dst), sizeof(struct in6_addr));
 	ph->ph_nxt = IPPROTO_ICMPV6;
 	ph->ph_len = ip6->ip6_plen;
 
 	tmp = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
-	memcpy(icmp6, tmp, sizeof(struct icmp6_hdr));
+	memcpy(icmp6, tmp, ntohs(ph->ph_len));
 
-	printf("DUUUH: %d == %d\n", ntohs(ph->ph_len), sizeof(struct icmp6_hdr));
-	sum = in_cksum(buf, sizeof(struct pseudo_header) + ph->ph_len);
+	sum = in_cksum(buf, sizeof(struct pseudo_header) + ntohs(ph->ph_len));
 
 	return sum;
 }
