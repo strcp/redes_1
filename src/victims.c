@@ -91,7 +91,7 @@ void *poison_vclient(void *conn) {
 }
 
 void init_svictim(const char *sv_address) {
-	char *server_victim = NULL;
+	char server_victim[INET6_ADDRSTRLEN];
 
 	if (inet_pton(AF_INET6, sv_address, &svictim.ipv6) <= 0) {
 		printf("Error setting victim's address\n");
