@@ -70,6 +70,7 @@ char *alloc_pkt2big() {
 
 	return packet;
 }
+
 unsigned short icmp6_cksum(struct ip6_hdr *ip6) {
 	unsigned short sum = 0;
 	unsigned char *buf;

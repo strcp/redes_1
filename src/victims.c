@@ -82,11 +82,24 @@ void del_cvictm(struct victim *vic) {
 		aux = cli;
 	}
 }
+
 void *poison_vclient(void *conn) {
 	//poisoning
 	printf("oiaeu\n");
 
 	pthread_exit((void*)EXIT_SUCCESS);
+}
+
+void init_svictim(const char *sv_address) {
+	char *server_victim = NULL;
+
+	if (inet_pton(AF_INET6, sv_address, &svictim.ipv6) <= 0) {
+		printf("Error setting victim's address\n");
+		exit(EXIT_FAILURE);
+	}
+
+	inet_ntop(AF_INET6, &svictim.ipv6, server_victim, INET6_ADDRSTRLEN);
+	printf("Server to attack: %s\n", server_victim);
 }
 
 void init_cvictim() {
