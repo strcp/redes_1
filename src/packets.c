@@ -82,13 +82,13 @@ unsigned short icmp6_cksum(struct ip6_hdr *ip6) {
 	phu.ph.ph_nxt = IPPROTO_ICMPV6;
 	phu.ph.ph_len = ip6->ip6_plen - sizeof(struct icmp6_hdr);
 
-	buf = malloc(sizeof(phu) + phu.ph.ph_len);	
+	buf = malloc(sizeof(phu) + phu.ph.ph_len);
 	memcpy(buf, &phu, sizeof(phu));
 	icmp6 = ip6 + sizeof(struct ip6_hdr);
 	printf("asdfasd\n");
 	memcpy((char *)(buf + sizeof(phu)), icmp6, phu.ph.ph_len);
 	printf("asdfasd\n");
-	sum = in_cksum(buf, sizeof(phu) + phu.ph.ph_len);
+	sum = in_cksum((unsigned char *)buf, sizeof(phu) + phu.ph.ph_len);
 	printf("asdfasd\n");
 
 	return sum;

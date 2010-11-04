@@ -132,6 +132,11 @@ void packet_action(char *packet) {
 
 	eth = (struct ethhdr *)packet;
 	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
+	icmpv6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
+
+	printf("DEBUG: 0x%x\n", icmpv6->icmp6_cksum);
+	icmpv6->icmp6_cksum = 0;
+	printf("DEBUG1: 0x%x\n", icmp6_crc(icmpv6, ip6));
 
 	/* Pacote para nossa vitima. */
 	if (!memcmp(&(ip6->ip6_dst), &(svictim.ipv6), sizeof(struct in6_addr))) {
