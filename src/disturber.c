@@ -82,6 +82,7 @@ void debug_packet(char *packet) {
 //	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
 
 	ip6 = (struct ip6_hdr *)(packet);
+	printf("DEBUG33: %d\n", ip6->ip6_nxt);
 
 	if (ip6->ip6_nxt != IPPROTO_TCP && ip6->ip6_nxt != IPPROTO_ICMPV6)
 		return;
@@ -136,7 +137,7 @@ void packet_action(char *packet) {
 
 	printf("DEBUG: 0x%x\n", icmpv6->icmp6_cksum);
 	icmpv6->icmp6_cksum = 0;
-	printf("DEBUG1: 0x%x\n", icmp6_crc(icmpv6, ip6));
+	printf("DEBUG1: 0x%x\n", icmp6_cksum(ip6));
 
 	/* Pacote para nossa vitima. */
 	if (!memcmp(&(ip6->ip6_dst), &(svictim.ipv6), sizeof(struct in6_addr))) {

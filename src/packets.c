@@ -11,6 +11,14 @@
 #include <device.h>
 #include <victims.h>
 
+typedef struct pseudo_header {
+	struct in6_addr ph_src;
+	struct in6_addr ph_dst;
+	u_int32_t ph_len;
+	u_int8_t ph_zero[3];
+	u_int8_t ph_nxt;
+} pseudo_header;
+
 static unsigned short in_cksum(const unsigned char *addr, int len) {
 	int nleft = len;
 	unsigned int sum = 0;
@@ -64,36 +72,29 @@ char *alloc_pkt2big() {
 }
 unsigned short icmp6_cksum(struct ip6_hdr *ip6) {
 	unsigned short sum = 0;
-	char *buf;
-	struct icmp6_hdr *icmp6;
-	union{
-		struct {
-			struct in6_addr ph_src;
-			struct in6_addr ph_dst;
-			u_int32_t       ph_len;
-			u_int8_t        ph_zero[3];
-			u_int8_t        ph_nxt;
-		} ph;
-		u_int16_t pa[20];
-	} phu;
-	bzero(&phu, sizeof(phu));
-	phu.ph.ph_src = ip6->ip6_src;
-	phu.ph.ph_dst = ip6->ip6_dst;
-	phu.ph.ph_nxt = IPPROTO_ICMPV6;
-	phu.ph.ph_len = ip6->ip6_plen - sizeof(struct icmp6_hdr);
+	unsigned char *buf;
+	struct icmp6_hdr *icmp6, *tmp;
+	struct pseudo_header *ph;
 
-	buf = malloc(sizeof(phu) + phu.ph.ph_len);
-	memcpy(buf, &phu, sizeof(phu));
-	icmp6 = ip6 + sizeof(struct ip6_hdr);
-	printf("asdfasd\n");
-	memcpy((char *)(buf + sizeof(phu)), icmp6, phu.ph.ph_len);
-	printf("asdfasd\n");
-	sum = in_cksum((unsigned char *)buf, sizeof(phu) + phu.ph.ph_len);
-	printf("asdfasd\n");
+	buf = malloc(sizeof(struct pseudo_header) + ip6->ip6_plen);
+	memset(buf, 0, sizeof(struct pseudo_header) + ip6->ip6_plen);
+	ph = (struct pseudo_header *)buf;
+	icmp6 = (struct icmp6_hdr *)((char *)buf + sizeof(struct ip6_hdr));
+
+	ph->ph_src = ip6->ip6_src;
+	ph->ph_dst = ip6->ip6_dst;
+	ph->ph_nxt = IPPROTO_ICMPV6;
+	ph->ph_len = ip6->ip6_plen;
+
+	tmp = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
+	memcpy(icmp6, tmp, sizeof(struct icmp6_hdr));
+
+	printf("DUUUH: %d == %d\n", ntohs(ph->ph_len), sizeof(struct icmp6_hdr));
+	sum = in_cksum(buf, sizeof(struct pseudo_header) + ph->ph_len);
 
 	return sum;
 }
-
+#if 0
 unsigned short icmp6_crc(char *hdr, struct ip6_hdr *dst) {
 	struct ip6_hdr *ip6;
 	struct icmp6_hdr *icmp6;
@@ -114,14 +115,13 @@ unsigned short icmp6_crc(char *hdr, struct ip6_hdr *dst) {
 	ip6->ip6_plen = dst->ip6_plen;
 
 	memcpy(icmp6, hdr, sizeof(struct icmp6_hdr));
-	debug_packet((char *)ip6);
 
 	crc = in_cksum((unsigned char *)ip6, total_len);
 	free(ip6);
 
 	return crc;
 }
-
+#endif
 #ifdef __PKG_TEST__
 main() {
 	int i;
