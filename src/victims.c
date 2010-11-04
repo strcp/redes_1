@@ -14,7 +14,6 @@
 #include <netinet/ether.h>
 
 #include <packets.h>
-#include <victims.h>
 #include <device.h>
 
 

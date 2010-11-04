@@ -42,35 +42,6 @@ static unsigned short in_cksum(const unsigned char *addr, int len) {
 	return answer;
 }
 
-// WARN: needs to be freed
-// TODO: O que passar de parâmetro? A estrutura da vítima?
-char *alloc_pkt2big() {
-	struct ethhdr *eth;
-	struct ip6_hdr *ip6;
-	struct icmp6_hdr *icmp6;
-	char *packet;
-
-	packet = malloc(sizeof(struct ethhdr) +
-					sizeof(struct ip6_hdr) +
-					sizeof(struct icmp6_hdr));
-
-	/* Ethernet Header*/
-	eth = (struct ethhdr *)packet;
-	memcpy(eth->h_source, &device.hwaddr, ETH_ALEN);
-	memcpy(eth->h_dest, (void *)ether_aton("00:00:03:00:CA:FE"), ETH_ALEN);
-	eth->h_proto = htons(ETH_P_IPV6);
-
-	/* IPv6 Header */
-	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
-	ip6->ip6_dst = svictim.ipv6;
-
-	/* ICMPv6 Header */
-	icmp6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
-	icmp6->icmp6_type = ICMP6_PACKET_TOO_BIG;
-
-	return packet;
-}
-
 unsigned short icmp6_cksum(struct ip6_hdr *ip6) {
 	unsigned short sum = 0;
 	unsigned char *buf;
@@ -95,34 +66,37 @@ unsigned short icmp6_cksum(struct ip6_hdr *ip6) {
 
 	return sum;
 }
-#if 0
-unsigned short icmp6_crc(char *hdr, struct ip6_hdr *dst) {
+
+// WARN: needs to be freed
+// TODO: O que passar de parâmetro? A estrutura da vítima?
+char *alloc_pkt2big(struct victim *svic, struct victim *dvic) {
+	struct ethhdr *eth;
 	struct ip6_hdr *ip6;
 	struct icmp6_hdr *icmp6;
-	struct nd_neighbor_advert *ad;
-	unsigned short crc;
-	int total_len;
+	char *packet;
 
-	total_len = sizeof(struct ip6_hdr) + sizeof(struct icmp6_hdr);
-	ip6 = (struct ip6_hdr *)malloc(total_len);
+	packet = malloc(sizeof(struct ethhdr) +
+					sizeof(struct ip6_hdr) +
+					sizeof(struct icmp6_hdr));
+
+	/* Ethernet Header*/
+	eth = (struct ethhdr *)packet;
+	memcpy(&(eth->h_source), &(device.hwaddr), ETH_ALEN);
+	memcpy(&(eth->h_dest), &(dvic->hwaddr), ETH_ALEN);
+	eth->h_proto = htons(ETH_P_IPV6);
+
+	/* IPv6 Header */
+	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
+	ip6->ip6_dst = dvic->ipv6;
+	ip6->ip6_src = svic->ipv6;
+
+	/* ICMPv6 Header */
 	icmp6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
+	icmp6->icmp6_type = ICMP6_PACKET_TOO_BIG;
 
-	bzero(ip6, total_len);
-
-	memcpy(&(ip6->ip6_dst), &(dst->ip6_dst), sizeof(struct in6_addr));
-	memcpy(&(ip6->ip6_src), &(dst->ip6_src), sizeof(struct in6_addr));
-
-	ip6->ip6_nxt = ip6->ip6_nxt;
-	ip6->ip6_plen = dst->ip6_plen;
-
-	memcpy(icmp6, hdr, sizeof(struct icmp6_hdr));
-
-	crc = in_cksum((unsigned char *)ip6, total_len);
-	free(ip6);
-
-	return crc;
+	return packet;
 }
-#endif
+
 #ifdef __PKG_TEST__
 main() {
 	int i;

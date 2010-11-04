@@ -1,8 +1,7 @@
+#include <pthread.h>
+
 #include <netinet/in.h>
 #include <netinet/ether.h>
-
-#include <pthread.h>
-#include <signal.h>
 
 typedef struct victim {
 	struct ether_addr hwaddr;
