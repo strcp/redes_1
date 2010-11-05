@@ -3,5 +3,6 @@
 
 #include <victims.h>
 
-unsigned short icmp6_cksum(struct ip6_hdr *ip6);
 char *alloc_pkt2big(struct victim *svic, struct victim *dvic);
+char *alloc_ndsolicit(struct in6_addr addr);
+char *alloc_ndadvert(struct victim *svic, struct victim *dvic);

@@ -155,12 +155,6 @@ void packet_action(char *packet) {
 			}
 		} else if (ip6->ip6_nxt == IPPROTO_ICMPV6) {
 			icmpv6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
-
-			/* CRC Debug */
-			printf("DEBUG: 0x%x\n", icmpv6->icmp6_cksum);
-			icmpv6->icmp6_cksum = 0;
-			printf("DEBUG1: 0x%x\n", icmp6_cksum(ip6));
-
 			/* Se for uma solicitação de discover e o cliente ainda não foi
 			 * "poisoned", dispara o poison. */
 			if (icmpv6->icmp6_type == ND_NEIGHBOR_SOLICIT) {
