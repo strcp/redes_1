@@ -77,7 +77,6 @@ static int bind_socket_to_device(char *device, int rawsock) {
 	return 1;
 }
 
-
 void debug_packet(char *packet) {
 	struct ethhdr *eth;
 	struct ip6_hdr *ip6;

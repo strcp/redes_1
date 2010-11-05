@@ -103,7 +103,7 @@ char *alloc_pkt2big(struct victim *svic, struct victim *dvic) {
 }
 
 // WARN:  needs to be freed
-char *alloc_ndsolicit(struct in6_addr addr) {
+char *alloc_ndsolicit(struct in6_addr *addr) {
 	struct ethhdr *eth;
 	struct ip6_hdr *ip6;
 	struct icmp6_hdr *icmp6;
@@ -125,7 +125,7 @@ char *alloc_ndsolicit(struct in6_addr addr) {
 	/* IPv6 Header */
 	/* TODO: Revisar os endereços */
 	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
-	ip6->ip6_dst = addr;
+	memcpy(&ip6->ip6_dst, addr, sizeof(struct in6_addr));
 	ip6->ip6_src = device.ipv6;
 	ip6->ip6_plen = htons(len);
 	ip6->ip6_nxt = IPPROTO_ICMPV6;
@@ -136,7 +136,7 @@ char *alloc_ndsolicit(struct in6_addr addr) {
 
 	/* ND Solicit */
 	nd = (struct nd_neighbor_solicit *)((char *)icmp6 + sizeof(struct icmp6_hdr));
-	nd->nd_ns_target = addr;
+	memcpy(&nd->nd_ns_target, addr, sizeof(struct in6_addr));
 
 	icmp6->icmp6_cksum = icmp6_cksum(ip6);
 

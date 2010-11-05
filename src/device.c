@@ -36,7 +36,10 @@
 void load_device_info(const char *dev_name) {
 	struct ifaddrs *ifaddr, *ifa;
 	struct ifreq ifr;
+	struct sockaddr_in6 *sin6 = NULL;
+	struct sockaddr_in *sin = NULL;
 	int sk;
+
 
 	if (!dev_name) {
 		printf("No device name.\n");
@@ -52,10 +55,13 @@ void load_device_info(const char *dev_name) {
 
 	for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
 		if (strcmp(dev_name, ifa->ifa_name) == 0) {
-			if (ifa->ifa_addr->sa_family == AF_INET6)
-				device.ipv6 = *(struct in6_addr *)(ifa->ifa_addr->sa_data);
-			else if (ifa->ifa_addr->sa_family == AF_INET)
-				device.ipv4 = *(struct in_addr *)(ifa->ifa_addr->sa_data);
+			if (ifa->ifa_addr->sa_family == AF_INET6) {
+				sin6 = (struct sockaddr_in6 *)ifa->ifa_addr;
+				memcpy(&device.ipv6, &sin6->sin6_addr, sizeof(struct in6_addr));
+			} else if (ifa->ifa_addr->sa_family == AF_INET) {
+				sin = (struct sockaddr_in *)ifa->ifa_addr;
+				memcpy(&device.ipv4, &sin->sin_addr, sizeof(struct in_addr));
+			}
 
 			if (ifa->ifa_flags != device.ifa_flags)
 				device.ifa_flags = ifa->ifa_flags;
