@@ -155,6 +155,9 @@ char *alloc_ndadvert(struct victim *svic, struct victim *dvic) {
 					sizeof(struct ip6_hdr) +
 					sizeof(struct nd_neighbor_advert);
 
+	if (!svic || !dvic)
+		return NULL;
+
 	packet = malloc(len);
 	memset(packet, 0, len);
 
