@@ -77,53 +77,6 @@ static int bind_socket_to_device(char *device, int rawsock) {
 	return 1;
 }
 
-void debug_packet(char *packet) {
-	struct ethhdr *eth;
-	struct ip6_hdr *ip6;
-	struct icmp6_hdr *icmpv6;
-	struct tcphdr *tcp;
-	char addr[INET6_ADDRSTRLEN];
-
-	eth = (struct ethhdr *)packet;
-	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
-
-	if (ip6->ip6_nxt != IPPROTO_TCP && ip6->ip6_nxt != IPPROTO_ICMPV6)
-		return;
-
-	printf("\n- PACKET START -\n");
-
-	printf("Ethernet:\n");
-	printf("\tEther src: %s\n", ether_ntoa((struct ether_addr *)eth->h_source));
-	printf("\tEther dest: %s\n", ether_ntoa((struct ether_addr *)eth->h_dest));
-
-	printf("IPv6:\n");
-	inet_ntop(AF_INET6, ip6->ip6_dst.s6_addr, addr, INET6_ADDRSTRLEN);
-	printf("\tTo: %s\n", addr);
-	memset(addr, 0, INET6_ADDRSTRLEN);
-	inet_ntop(AF_INET6, ip6->ip6_src.s6_addr, addr, INET6_ADDRSTRLEN);
-	printf("\tFrom: %s\n", addr);
-	printf("\tPayload Length: 0x%x\n", ntohs(ip6->ip6_plen));
-
-	switch (ip6->ip6_nxt) {
-		case IPPROTO_ICMPV6:
-			icmpv6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
-			printf("ICMPv6:\n");
-			printf("\tCode: %d\n", icmpv6->icmp6_code);
-			printf("\tType: %d\n", icmpv6->icmp6_type);
-			printf("\tCRC: %x\n", icmpv6->icmp6_cksum);
-			break;
-		case IPPROTO_TCP:
-			tcp = (struct tcphdr *)((char *)ip6 + sizeof(struct ip6_hdr));
-			printf("TCP:\n");
-			printf("\tDest Port: %d\n", tcp->dest);
-			printf("\tSrc Port: %d\n", tcp->source);
-			break;
-		default:
-			break;
-	}
-	printf("- PACKET END -\n\n");
-}
-
 void packet_action(char *packet) {
 	struct ethhdr *eth;
 	struct ip6_hdr *ip6;
