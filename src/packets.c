@@ -119,7 +119,8 @@ char *alloc_ndsolicit(struct in6_addr *addr) {
 	/* Ethernet Header*/
 	eth = (struct ethhdr *)packet;
 	memcpy(&(eth->h_source), &(device.hwaddr), ETH_ALEN);
-	// TODO: Dest MAC broadcast
+	memcpy(eth->h_dest, ether_aton("33:33:00:00:00:00"), sizeof(struct ether_addr));
+	memcpy(&eth->h_dest[ETH_ALEN - 4], &addr->s6_addr[12], 4);
 	eth->h_proto = htons(ETH_P_IPV6);
 
 	/* IPv6 Header */

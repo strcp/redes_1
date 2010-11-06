@@ -202,7 +202,6 @@ int main(int argc, char **argv) {
 	char packet_buffer[2048];
 	struct sockaddr_ll packet_info;
 	int packet_info_size = sizeof(packet_info);
-
 	struct sigaction saction;
 
 	/* Set up the structure to specify the new action. */
