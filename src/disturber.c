@@ -2,20 +2,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <netdb.h>
-#include <ifaddrs.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <signal.h>
 
 #include <sys/socket.h>
-#include <sys/ioctl.h>
-#include <net/if.h>
-
 #include <linux/if_packet.h>
-
 #include <arpa/inet.h>
-#include <netinet/in.h>
+
 #include <netinet/if_ether.h>
 #include <netinet/ip6.h>
 #include <netinet/icmp6.h>
@@ -24,57 +18,15 @@
 
 #include <device.h>
 #include <packets.h>
+#include <communication.h>
 
 #define DEBUG 0
 
 
 void termination_handler(int signum) {
 	/* TODO */
-	printf("Sig: %d\nFree everything\n", signum);
+	printf("\nSig: %d\nFree everything\n", signum);
 	exit(0);
-}
-
-static int raw_socket(int proto) {
-	int rawsock;
-
-	if ((rawsock = socket(PF_PACKET, SOCK_RAW, htons(proto))) < 0) {
-		perror("Error creating raw socket: ");
-		exit(-1);
-	}
-
-	return rawsock;
-}
-
-static int bind_socket_to_device(char *device, int rawsock) {
-	struct packet_mreq *pkt;
-	struct ifreq ifr;
-
-	memset(&ifr, 0, sizeof(ifr));
-
-	strncpy((char *)ifr.ifr_name, device, IFNAMSIZ);
-
-	/* Go promisc */
-	if ((ioctl(rawsock, SIOCGIFFLAGS, &ifr)) < 0) {
-		perror("Error reading flags from device: ");
-		exit(-1);
-	}
-
-	ifr.ifr_flags |= IFF_PROMISC;
-	if ((ioctl(rawsock, SIOCSIFFLAGS, &ifr)) < 0) {
-		perror("Error setting flags to device: ");
-		exit(-1);
-	}
-
-	pkt = (struct packet_mreq *)malloc(sizeof(struct packet_mreq));
-	memset((struct packet_mreq *)pkt, 0, sizeof(struct packet_mreq));
-	pkt->mr_ifindex = ifr.ifr_ifindex;
-	pkt->mr_type = PACKET_MR_PROMISC;
-	setsockopt(rawsock, SOL_PACKET, PACKET_MR_PROMISC, (char *)&pkt,
-			sizeof(struct packet_mreq));
-
-	free(pkt);
-
-	return 1;
 }
 
 void packet_action(char *packet) {
@@ -172,12 +124,7 @@ int main(int argc, char **argv) {
 	load_device_info(argv[1]);
 	dump_device_info();
 
-	/* create the raw socket */
-	raw = raw_socket(ETH_P_IPV6);
-
-	/* Bind socket to interface and going promisc */
-	bind_socket_to_device(device.name, raw);
-
+	raw = get_promisc_socket(device.name);
 	init_svictim(argv[2]);
 	init_cvictim();
 
@@ -189,10 +136,12 @@ int main(int argc, char **argv) {
 	/* STOP DEBUG */
 #endif
 
+	printf("Hi: %d\n", raw);
 	while ((len = recvfrom(raw, packet_buffer, 2048, 0,
 						(struct sockaddr*)&packet_info,
 						(socklen_t *)&packet_info_size)) >= 0) {
-			debug_packet((char *)packet_buffer+sizeof(struct ethhdr *));
+
+			debug_packet((char *)packet_buffer + sizeof(struct ethhdr *));
 			packet_action(packet_buffer);
 	}
 
