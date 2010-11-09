@@ -188,7 +188,7 @@ char *alloc_ndsolicit(struct in6_addr *addr) {
 	icmp6->icmp6_type = ND_NEIGHBOR_SOLICIT;
 
 	/* ND Solicit */
-	nd = (struct nd_neighbor_solicit *)((char *)icmp6 + sizeof(struct icmp6_hdr));
+	nd = (struct nd_neighbor_solicit *)icmp6;
 	memcpy(&nd->nd_ns_target, addr, sizeof(struct in6_addr));
 
 	icmp6->icmp6_cksum = icmp6_cksum(ip6);
@@ -233,7 +233,7 @@ char *alloc_ndadvert(struct victim *svic, struct victim *dvic) {
 	icmp6->icmp6_type = ND_NEIGHBOR_ADVERT;
 
 	/* ND Advertise */
-	nd = (struct nd_neighbor_advert *)((char *)icmp6 + sizeof(struct icmp6_hdr));
+	nd = (struct nd_neighbor_advert *)icmp6;
 	nd->nd_na_target = dvic->ipv6;
 
 	icmp6->icmp6_cksum = icmp6_cksum(ip6);
