@@ -23,9 +23,12 @@
 #define DEBUG 0
 
 
+int sniff;
+
 void termination_handler(int signum) {
 	/* TODO */
 	printf("\nSig: %d\nFree everything\n", signum);
+	close(sniff);
 	exit(0);
 }
 
@@ -103,11 +106,11 @@ void packet_action(char *packet) {
 }
 
 int main(int argc, char **argv) {
-	int raw, len;
-	char packet_buffer[2048];
 	struct sockaddr_ll packet_info;
-	int packet_info_size = sizeof(packet_info);
 	struct sigaction saction;
+	char packet_buffer[2048], *pkt;
+	int len;
+	int packet_info_size = sizeof(packet_info);
 
 	/* Set up the structure to specify the new action. */
 	saction.sa_handler = termination_handler;
@@ -124,20 +127,19 @@ int main(int argc, char **argv) {
 	load_device_info(argv[1]);
 	dump_device_info();
 
-	raw = get_promisc_socket(device.name);
+	sniff = get_promisc_socket(device.name);
 	init_svictim(argv[2]);
 	init_cvictim();
 
-#if 0
-	/* START DEBUG TESTE */
-	teste = alloc_pkt2big();
-	packet_action(teste);
-	free(teste);
-	/* STOP DEBUG */
-#endif
+	/* Begin Teste */
+	pkt = alloc_ndsolicit(&svictim.ipv6);
+	send_icmpv6(&svictim.ipv6, pkt);
 
-	printf("Hi: %d\n", raw);
-	while ((len = recvfrom(raw, packet_buffer, 2048, 0,
+	if (pkt)
+		free(pkt);
+	/* End Teste */
+
+	while ((len = recvfrom(sniff, packet_buffer, 2048, 0,
 						(struct sockaddr*)&packet_info,
 						(socklen_t *)&packet_info_size)) >= 0) {
 

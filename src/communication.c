@@ -58,6 +58,34 @@ static int bind_socket_to_device(char *device, int rawsock) {
 	return 1;
 }
 
+int send_icmpv6(struct in6_addr *dest, char *pkt) {
+	struct ip6_hdr *ip6;
+	struct icmp6_hdr *icmp6;
+	struct sockaddr_in6 sin;
+	int raw;
+
+	if (pkt == NULL)
+		return 0;
+
+	ip6 = (struct ip6_hdr *)pkt;
+	icmp6 = (struct icmp6_hdr *)((char *)pkt + sizeof(struct ip6_hdr));
+
+	raw = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
+
+	sin.sin6_family = AF_INET6;
+	sin.sin6_addr = *dest;
+
+	if ((sendto(raw, (char *)icmp6, ntohs(ip6->ip6_plen), 0,
+		(struct sockaddr *)&sin, sizeof(struct sockaddr_in6))) < 1) {
+		perror("Error sending packet: ");
+		close(raw);
+		return 0;
+	}
+	close(raw);
+
+	return 1;
+}
+
 int get_promisc_socket(char *dev_name) {
 	int raw;
 
