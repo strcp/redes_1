@@ -161,7 +161,7 @@ char *alloc_ndsolicit(struct in6_addr *addr) {
 	ip6 = (struct ip6_hdr *)packet;
 	memcpy(&ip6->ip6_dst, addr, sizeof(struct in6_addr));
 	ip6->ip6_src = device.ipv6;
-	ip6->ip6_plen = htons(len);
+	ip6->ip6_plen = htons(sizeof(struct nd_neighbor_solicit));
 	ip6->ip6_nxt = IPPROTO_ICMPV6;
 
 	/* ICMPv6 Header */
@@ -202,7 +202,7 @@ char *alloc_ndadvert(struct victim *svic, struct victim *dvic) {
 	ip6 = (struct ip6_hdr *)packet;
 	ip6->ip6_dst = dvic->ipv6;
 	ip6->ip6_src = svic->ipv6;
-	ip6->ip6_plen = htons(len);
+	ip6->ip6_plen = htons(len - sizeof(struct ip6_hdr));
 	ip6->ip6_nxt = IPPROTO_ICMPV6;
 	ip6->ip6_hlim = 255;
 
