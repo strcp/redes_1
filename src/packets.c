@@ -158,7 +158,6 @@ char *alloc_ndsolicit(struct in6_addr *addr) {
 	memset(packet, 0, len);
 
 	/* IPv6 Header */
-	/* TODO: Revisar os endereços */
 	ip6 = (struct ip6_hdr *)packet;
 	memcpy(&ip6->ip6_dst, addr, sizeof(struct in6_addr));
 	ip6->ip6_src = device.ipv6;
