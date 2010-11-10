@@ -27,7 +27,7 @@ void debug_cvivtim(struct victim *cli) {
 	printf("IPv6: %s\n", buf);
 }
 
-struct victim *get_cvictim(struct ether_addr *hwaddr) {
+/*struct victim *get_cvictim(struct ether_addr *hwaddr) {
 	struct cli_victim *cli;
 
 	for (cli = cvictim; cli; cli = cli->nxt) {
@@ -89,7 +89,7 @@ void *poison_vclient(void *conn) {
 
 	pthread_exit((void*)EXIT_SUCCESS);
 }
-
+*/
 void init_svictim(const char *sv_address) {
 	char server_victim[INET6_ADDRSTRLEN];
 
@@ -100,12 +100,13 @@ void init_svictim(const char *sv_address) {
 
 	inet_ntop(AF_INET6, &svictim.ipv6, server_victim, INET6_ADDRSTRLEN);
 	printf("Server to attack: %s\n", server_victim);
+	printf("Sending Neighbor Solicitation to %s\n", server_victim);
 }
 
 void init_cvictim() {
 	cvictim = NULL;
 }
-
+/*
 void cleanup_cvictims() {
 	struct cli_victim *cli, *aux;
 
@@ -116,4 +117,4 @@ void cleanup_cvictims() {
 	}
 
 	cvictim = NULL;
-}
+}*/

