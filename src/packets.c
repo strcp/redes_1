@@ -204,7 +204,7 @@ char *alloc_ndadvert(struct victim *svic, struct victim *dvic) {
 	ip6->ip6_src = svic->ipv6;
 	ip6->ip6_plen = htons(len);
 	ip6->ip6_nxt = IPPROTO_ICMPV6;
-	ip6->ip6_hlim = htons(255); //ta ficando 64...
+	ip6->ip6_hlim = 255;
 
 	/* ICMPv6 Header */
 	icmp6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
