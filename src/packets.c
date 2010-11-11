@@ -156,10 +156,13 @@ char *alloc_ndsolicit(struct in6_addr *addr) {
 	struct ip6_hdr *ip6;
 	struct icmp6_hdr *icmp6;
 	struct nd_neighbor_solicit *nd;
-	char *packet;
+	struct nd_opt_hdr *opt;
+	char *packet, *data;
 	unsigned int len = sizeof(struct ethhdr) +
 						sizeof(struct ip6_hdr) +
-						sizeof(struct nd_neighbor_solicit);
+						sizeof(struct nd_neighbor_solicit) +
+						sizeof(struct nd_opt_hdr) +
+						ETH_ALEN;
 
 	if (!addr)
 		return NULL;
@@ -171,9 +174,6 @@ char *alloc_ndsolicit(struct in6_addr *addr) {
 	eth = (struct ethhdr *)packet;
 	eth->h_proto = htons(ETH_P_IPV6);
 	memcpy(eth->h_source, &device.hwaddr, ETH_ALEN);
-	/* Multicast ethernet address (rfc3307) */
-	memcpy(eth->h_dest, ether_aton("33:33:00:00:00:00"), ETH_ALEN);
-	memcpy(&eth->h_dest[ETH_ALEN - 4], &addr->s6_addr[12], 4);
 
 	/* IPv6 Header */
 	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
@@ -182,8 +182,12 @@ char *alloc_ndsolicit(struct in6_addr *addr) {
 	memcpy(&ip6->ip6_dst.s6_addr[13], &addr->s6_addr[13], 3);
 
 	ip6->ip6_src = device.ipv6;
-	ip6->ip6_plen = htons(sizeof(struct nd_neighbor_solicit));
+	ip6->ip6_plen = htons(len - (sizeof(struct ethhdr) + sizeof(struct ip6_hdr)));
 	ip6->ip6_nxt = IPPROTO_ICMPV6;
+
+	/* Multicast ethernet address (rfc3307) */
+	memcpy(eth->h_dest, ether_aton("33:33:00:00:00:00"), ETH_ALEN);
+	memcpy(&eth->h_dest[ETH_ALEN - 4], &ip6->ip6_dst.s6_addr[12], 4);
 
 	/* ICMPv6 Header */
 	icmp6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
@@ -192,6 +196,13 @@ char *alloc_ndsolicit(struct in6_addr *addr) {
 	/* ND Solicit */
 	nd = (struct nd_neighbor_solicit *)icmp6;
 	memcpy(&nd->nd_ns_target, addr, sizeof(struct in6_addr));
+
+	/* Options */
+	opt = (struct nd_opt_hdr *)((char *)nd + sizeof(struct nd_neighbor_solicit));
+	opt->nd_opt_type = ND_OPT_SOURCE_LINKADDR;
+	opt->nd_opt_len = 1;
+//	data = (char *)opt + sizeof(struct nd_opt_hdr);
+//	memcpy(data, &device.hwaddr, ETH_ALEN);
 
 	icmp6->icmp6_cksum = icmp6_cksum(ip6);
 
