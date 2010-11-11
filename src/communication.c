@@ -58,25 +58,29 @@ static int bind_socket_to_device(char *device, int rawsock) {
 	return 1;
 }
 
-int send_icmpv6(struct in6_addr *dest, char *pkt) {
+int send_packet(struct in6_addr *dest, char *pkt) {
+	struct ethhdr *eth;
 	struct ip6_hdr *ip6;
-	struct icmp6_hdr *icmp6;
-	struct sockaddr_in6 sin;
+	struct sockaddr_ll to;
 	int raw;
+	unsigned int len;
 
 	if (pkt == NULL)
 		return 0;
 
-	ip6 = (struct ip6_hdr *)pkt;
-	icmp6 = (struct icmp6_hdr *)((char *)pkt + sizeof(struct ip6_hdr));
+	eth = (struct ethhdr *)pkt;
+	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
 
-	raw = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
+	len = ntohs(ip6->ip6_plen) + sizeof(struct ip6_hdr) + sizeof(struct ethhdr);
 
-	sin.sin6_family = AF_INET6;
-	sin.sin6_addr = *dest;
+	raw = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 
-	if ((sendto(raw, (char *)icmp6, ntohs(ip6->ip6_plen), 0,
-		(struct sockaddr *)&sin, sizeof(struct sockaddr_in6))) < 1) {
+	to.sll_protocol= htons(ETH_P_ALL);
+	to.sll_ifindex = device.index;
+	memcpy (to.sll_addr, eth->h_dest, ETH_ALEN);
+
+	if ((sendto(raw, pkt, len, 0, (struct sockaddr *)&to,
+						sizeof(struct sockaddr_ll))) < 1) {
 		perror("Error sending packet: ");
 		close(raw);
 		return 0;
