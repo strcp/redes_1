@@ -84,11 +84,8 @@ void packet_action(char *packet) {
 	struct tcphdr *tcp;
 	struct nd_neighbor_solicit *nd;
 
-	debug_packet(packet);
-
 	eth = (struct ethhdr *)packet;
 	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
-
 
 	switch (ip6->ip6_nxt) {
 		case IPPROTO_ICMPV6:
@@ -150,21 +147,6 @@ void packet_action(char *packet) {
 		}
 	}
 
-#if 0
-		cli = get_cvictim(eth);
-
-		printf("\e[32mDebug Cliente\n");
-		debug_cvivtim(&cli->cv_victim);
-		printf("Debug Vitima\n");
-		debug_cvivtim(&svictim);
-		printf("\e[0m");
-
-		if (pthread_create(&(cli->th), 0, &poison_vclient, cli)) {
-			printf("Error creating thread\n");
-			//printf("Client: %s", );
-		}
-	}
-#endif
 }
 
 int main(int argc, char **argv) {
@@ -204,8 +186,6 @@ int main(int argc, char **argv) {
 	while ((len = recvfrom(sniff, packet_buffer, 2048, 0,
 						(struct sockaddr*)&packet_info,
 						(socklen_t *)&packet_info_size)) >= 0) {
-
-			//debug_packet((char *)packet_buffer + sizeof(struct ethhdr *));
 			packet_action(packet_buffer);
 	}
 

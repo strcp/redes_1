@@ -177,7 +177,10 @@ char *alloc_ndsolicit(struct in6_addr *addr) {
 
 	/* IPv6 Header */
 	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
-	memcpy(&ip6->ip6_dst, addr, sizeof(struct in6_addr));
+	/* Sending to multicast IPv6 (rfc4291) */
+	inet_pton(AF_INET6, "ff02::1:ff00:0", ip6->ip6_dst.s6_addr);
+	memcpy(&ip6->ip6_dst.s6_addr[13], &addr->s6_addr[13], 3);
+
 	ip6->ip6_src = device.ipv6;
 	ip6->ip6_plen = htons(sizeof(struct nd_neighbor_solicit));
 	ip6->ip6_nxt = IPPROTO_ICMPV6;
