@@ -58,7 +58,7 @@ static int bind_socket_to_device(char *device, int rawsock) {
 	return 1;
 }
 
-int send_packet(struct in6_addr *dest, char *pkt) {
+int send_packet(char *pkt) {
 	struct ethhdr *eth;
 	struct ip6_hdr *ip6;
 	struct sockaddr_ll to;

