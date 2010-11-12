@@ -160,9 +160,9 @@ char *alloc_ndsolicit(struct in6_addr *addr) {
 	char *packet, *data;
 	unsigned int len = sizeof(struct ethhdr) +
 						sizeof(struct ip6_hdr) +
-						sizeof(struct nd_neighbor_solicit) +
-						sizeof(struct nd_opt_hdr) +
-						ETH_ALEN;
+						sizeof(struct nd_neighbor_solicit);// +
+					//	sizeof(struct nd_opt_hdr) +
+					//	ETH_ALEN;
 
 	if (!addr)
 		return NULL;
@@ -198,12 +198,13 @@ char *alloc_ndsolicit(struct in6_addr *addr) {
 	memcpy(&nd->nd_ns_target, addr, sizeof(struct in6_addr));
 
 	/* Options */
+	#if 0
 	opt = (struct nd_opt_hdr *)((char *)nd + sizeof(struct nd_neighbor_solicit));
 	opt->nd_opt_type = ND_OPT_SOURCE_LINKADDR;
 	opt->nd_opt_len = 1;
-//	data = (char *)opt + sizeof(struct nd_opt_hdr);
-//	memcpy(data, &device.hwaddr, ETH_ALEN);
-
+	data = (char *)((char *)opt + sizeof(struct nd_opt_hdr));
+	memcpy(data, &device.hwaddr, ETH_ALEN);
+#endif
 	icmp6->icmp6_cksum = icmp6_cksum(ip6);
 
 	return packet;
