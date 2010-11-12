@@ -21,10 +21,29 @@
 void debug_cvivtim(struct victim *cli) {
 	char buf[INET6_ADDRSTRLEN];
 
+	if (!victim_info_complete(cli)) {
+		printf("Client victim not loaded.\n");
+		return;
+	}
+
 	printf("HWADDR: %s\n", ether_ntoa(&(cli->hwaddr)));
 	memset(buf, 0, INET6_ADDRSTRLEN);
 	inet_ntop(AF_INET6, cli->ipv6.s6_addr, buf, INET6_ADDRSTRLEN);
 	printf("IPv6: %s\n", buf);
+}
+
+int victim_info_complete(struct victim *vic) {
+	struct ether_addr eth;
+	struct in6_addr ipv6;
+
+	memset(&eth, 0, sizeof(struct ether_addr));
+	memset(&ipv6, 0, sizeof(struct in6_addr));
+
+	if (!vic || !memcmp(&vic->hwaddr, &eth, sizeof(struct ether_addr)) ||
+		!memcmp(&vic->ipv6, &ipv6, sizeof(struct in6_addr)))
+		return 0;
+
+	return 1;
 }
 
 /*struct victim *get_cvictim(struct ether_addr *hwaddr) {

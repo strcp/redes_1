@@ -73,18 +73,18 @@ int send_packet(char *pkt) {
 
 	len = ntohs(ip6->ip6_plen) + sizeof(struct ip6_hdr) + sizeof(struct ethhdr);
 
-	if ((raw = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0) {
+	if ((raw = raw_socket(ETH_P_ALL)) < 0) {
 		perror("Error creating socket: ");
 		return raw;
 	}
 
-	to.sll_protocol= htons(ETH_P_ALL);
+	memset(&to, 0, sizeof(struct sockaddr_ll));
+	to.sll_family = PF_PACKET;
+	to.sll_protocol = htons(ETH_P_ALL);
 	to.sll_ifindex = device.index;
 	memcpy(to.sll_addr, eth->h_dest, ETH_ALEN);
 
-	/* FIXME: Sometimes we got a "Invalid argument" as error */
-	if ((sendto(raw, pkt, len, 0, (struct sockaddr *)&to,
-						sizeof(struct sockaddr_ll))) < 0) {
+	if ((sendto(raw, pkt, len, 0, (struct sockaddr *)&to, sizeof(to))) < 0) {
 		perror("Error sending packet: ");
 		close(raw);
 		return -1;

