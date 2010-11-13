@@ -272,3 +272,12 @@ char *alloc_ndadvert(struct victim *svic, struct victim *dvic) {
 
 	return packet;
 }
+
+void fake_packet(char *packet, struct victim *dvic) {
+	struct ethhdr *eth;
+
+	eth = (struct ethhdr *)packet;
+
+	memcpy(eth->h_source, &device.hwaddr, ETH_ALEN);
+	memcpy(eth->h_dest, &dvic->hwaddr, ETH_ALEN);
+}

