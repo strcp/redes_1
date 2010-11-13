@@ -1,7 +1,5 @@
-- Funções para criar os pacotes:
-	- Packet to big
-	- Neighbor Advertise
-	- Neighbor Discovery
-- O Poison deve ser feito em ambos os lados? (para o client e para o server vitima)?
-- Popular a struct svictim com os dados do server vitima.
-	- Fazer um Neighbor Discovery para pegar o mac address do server vitima.
+- Parâmetro para forçar um client a ser atacado.
+- Enviar solicitation enquanto não receber advertisement do server?
+- Analisar pacotes mesmo que não sejam de advertisement para pegar hwaddr do
+client?
+- Logfile com libpcap?
