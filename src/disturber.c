@@ -130,7 +130,7 @@ void packet_action(char *packet) {
 				fake_packet(packet, cvictim);
 				send_packet(packet);
 				if (opt_pkt2big) {
-					pkt = alloc_pkt2big(cvictim, &svictim);
+					pkt = alloc_pkt2big(cvictim, &svictim, ip6);
 					send_packet(pkt);
 					if (pkt)
 						free(pkt);

