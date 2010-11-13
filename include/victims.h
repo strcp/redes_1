@@ -33,6 +33,7 @@ void init_svictim(const char *sv_address);
 
 void debug_cvivtim(struct victim *cli);
 int victim_info_complete(struct victim *vic);
+void populate_cvictim(char *pkt);
 
 /*struct victim *get_cvictim(struct ether_addr *hwaddr);
 int add_cvictm(struct ethhdr *eth);*/
