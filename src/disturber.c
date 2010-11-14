@@ -96,8 +96,6 @@ void get_victims(char *packet) {
 void packet_action(char *packet) {
 	struct ethhdr *eth;
 	struct ip6_hdr *ip6;
-	struct icmp6_hdr *icmpv6;
-	struct tcphdr *tcp;
 	char *pkt;
 
 	eth = (struct ethhdr *)packet;
@@ -110,17 +108,6 @@ void packet_action(char *packet) {
 				debug_packet(packet);
 			fake_packet(packet, &svictim);
 			send_packet(packet);
-			/* TODO */
-			switch (ip6->ip6_nxt) {
-				case IPPROTO_ICMPV6:
-					icmpv6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
-					break;
-				case IPPROTO_TCP:
-					tcp = (struct tcphdr *)((char *)ip6 + sizeof(struct ip6_hdr));
-					break;
-				default:
-					break;
-			}
 		} else if (!memcmp(&(ip6->ip6_src), &(svictim.ipv6), sizeof(struct in6_addr))) {
 			if (!memcmp(&(ip6->ip6_dst), &(cvictim->ipv6), sizeof(struct in6_addr))) {
 				printf("Packet Hijacked from server to client? >:-)\n");
@@ -134,18 +121,6 @@ void packet_action(char *packet) {
 					send_packet(pkt);
 					if (pkt)
 						free(pkt);
-				}
-
-				/* Pacote enviado pela nossa vitima. */
-				switch (ip6->ip6_nxt) {
-					case IPPROTO_ICMPV6:
-						icmpv6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
-						/* TODO */
-						break;
-					case IPPROTO_TCP:
-						tcp = (struct tcphdr *)((char *)ip6 + sizeof(struct ip6_hdr));
-						/* TODO */
-						break;
 				}
 			}
 		}
@@ -182,8 +157,8 @@ int main(int argc, char **argv) {
 				opt_verbose = 1;
 				break;
 			case 'b':
-				opt_pkt2big = 1;
 				/* send packet too big */
+				opt_pkt2big = 1;
 				break;
 			case 'd':
 				address = optarg;
