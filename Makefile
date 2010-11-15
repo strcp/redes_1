@@ -1,9 +1,3 @@
-CC = gcc
-CFLAGS = -Wall -ansi -lpthread
-EXEC = disturber
-SRC = $(wildcard *.c)
-OBJ = $(SRC:.c=.o)
-
 all:
 	cd src && $(MAKE)
 
