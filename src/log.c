@@ -39,7 +39,7 @@ void log_packet(const char *packet) {
 		len = sizeof(struct pcap_hdr_s);
 	}
 
-	if (!(fd = open("test.pcap", O_RDWR | O_CREAT))) {
+	if (!(fd = open("test.pcap", O_WRONLY | O_APPEND | O_CREAT))) {
 		perror("Logfile ");
 
 		return;
