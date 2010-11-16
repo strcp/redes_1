@@ -33,16 +33,9 @@ void debug_packet(char *packet) {
 	struct icmp6_hdr *icmpv6;
 	struct tcphdr *tcp;
 	char addr[INET6_ADDRSTRLEN];
-	int fd;
 
 	eth = (struct ethhdr *)packet;
 	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
-
-	if ((fd = open("test", O_RDWR | O_CREAT))) {
-		write(fd, packet, ntohs(ip6->ip6_plen) + sizeof(struct ip6_hdr) +
-												sizeof(struct ethhdr));
-		close(fd);
-	}
 
 	if (ip6->ip6_nxt != IPPROTO_TCP && ip6->ip6_nxt != IPPROTO_ICMPV6)
 		return;

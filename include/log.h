@@ -15,3 +15,4 @@ typedef struct pcaprec_hdr_s {
 	uint32_t orig_len;      /* actual length of packet */
 } pcaprec_hdr_t;
 
+void log_packet(const char *packet);

