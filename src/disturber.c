@@ -159,7 +159,7 @@ void packet_action(char *packet) {
 
 void usage(const char *name) {
 	printf("Usage: %s -i <interface> -d <victim's address>\n" \
-			"\t-l \tLog hijacked packets\n" \
+			"\t-l \tLog hijacked packets in pcap file\n" \
 			"\t-v \tVerbose\n" \
 			"\t-b \tSend \"packet too big\" to attacked server\n", name);
 }
