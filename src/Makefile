@@ -12,4 +12,5 @@ disturber: $(OBJ)
 .PHONY: clean mrproper
 clean:
 	rm -rf *.o
-	find . -type f -executable -exec rm {} \;
+	rm -rf *.pcap
+	find . -type f -perm +x -exec rm {} \;
