@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <signal.h>
+#include <getopt.h>
 
 #include <sys/socket.h>
 #include <linux/if_packet.h>
@@ -32,11 +33,12 @@
 
 #define DEBUG 0
 
-int sniff, opt_verbose, opt_pkt2big;
+static int sniff, opt_verbose, opt_pkt2big;
 char *logfile;
 pthread_t pid0;
 
-void termination_handler() {
+
+static void termination_handler() {
 	printf("\nFree everything\n");
 
 	close(sniff);
@@ -45,7 +47,7 @@ void termination_handler() {
 	exit(0);
 }
 
-void *poison(void *destination) {
+static void *poison(void *destination) {
 	struct victim *dst = (struct victim *)destination;
 	char *pkt1, *pkt2;
 	char addr[INET6_ADDRSTRLEN];
@@ -80,7 +82,7 @@ void *poison(void *destination) {
 	pthread_exit(NULL);
 }
 
-void get_victims(char *packet) {
+static void get_victims(char *packet) {
 	struct ethhdr *eth;
 	struct ip6_hdr *ip6;
 	struct icmp6_hdr *icmpv6;
@@ -110,7 +112,7 @@ void get_victims(char *packet) {
 	}
 }
 
-void packet_action(char *packet) {
+static void packet_action(char *packet) {
 	struct ethhdr *eth;
 	struct ip6_hdr *ip6;
 	char *pkt, timestamp[10];
@@ -157,20 +159,27 @@ void packet_action(char *packet) {
 	}
 }
 
-void usage(const char *name) {
-	printf("Usage: %s -i <interface> -d <victim's address>\n" \
-			"\t-l \tLog hijacked packets in pcap file\n" \
-			"\t-v \tVerbose\n" \
-			"\t-b \tSend \"packet too big\" to attacked server\n", name);
+static void usage(const char *name) {
+	printf("Usage: %s --iface <interface> <victim's address>\n" \
+			"\t--log <logfiel.pcap> \tLog hijacked packets in pcap file\n" \
+			"\t--verbose \t\tVerbose\n" \
+			"\t--pkt2big \t\tSend \"packet too big\" to attacked server\n", name);
 }
 
 int main(int argc, char **argv) {
 	struct sockaddr_ll packet_info;
 	struct sigaction saction;
-	char packet_buffer[2048];
-	int packet_info_size = sizeof(packet_info);
-	int len, c;
 	char *iface = NULL, *address = NULL;
+	int packet_info_size = sizeof(packet_info);
+	int len, c, option_index;
+	char packet_buffer[2048];
+	static struct option long_options[] = {
+		{"verbose", no_argument, 0, 'v'},
+		{"pkt2big", no_argument, 0, 'p'},
+		{"iface", required_argument, 0, 'i'},
+		{"log", required_argument, 0, 'l'},
+		{0, 0, 0, 0}
+	};
 
 	/* Set up the structure to specify the new action. */
 	saction.sa_handler = termination_handler;
@@ -179,26 +188,19 @@ int main(int argc, char **argv) {
 
 	sigaction(SIGINT, &saction, NULL);
 
-	opt_verbose = 0;
-	opt_pkt2big = 0;
-	opterr = 0;
+	option_index = 0;
 	logfile = NULL;
 
-	while ((c = getopt(argc, argv, "vbl:d:i:")) != -1) {
+	while ((c = getopt_long (argc, argv, "vpl:i:", long_options, &option_index)) != -1) {
 		switch (c) {
-			case 'l':
-				logfile = optarg;
-				break;
-			case 'v':
-				/* Verbose */
-				opt_verbose = 1;
-				break;
-			case 'b':
-				/* send packet too big */
+			case 'p':
 				opt_pkt2big = 1;
 				break;
-			case 'd':
-				address = optarg;
+			case 'v':
+				opt_verbose = 1;
+				break;
+			case 'l':
+				logfile = optarg;
 				break;
 			case 'i':
 				iface = optarg;
@@ -210,6 +212,8 @@ int main(int argc, char **argv) {
 				abort();
 		}
 	}
+
+	address = argv[optind];
 
 	if (!address || !iface) {
 		usage(argv[0]);
