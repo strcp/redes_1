@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <time.h>
+#include <string.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -21,6 +22,9 @@ void log_packet(const char *packet) {
 
 	if (packet == NULL)
 		return;
+
+	memset(&rec, 0, sizeof(struct pcaprec_hdr_s));
+	memset(&global, 0, sizeof(struct pcap_hdr_s));
 
 	sec = time(NULL);
 	len = 0;
@@ -51,21 +55,21 @@ void log_packet(const char *packet) {
 	eth = (struct ethhdr *)packet;
 	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
 
+	len = ntohs(ip6->ip6_plen) +
+			sizeof(struct ip6_hdr) +
+			sizeof(struct ethhdr);
+
 	/* Pcap record header */
 	rec.ts_sec = sec;
 	rec.ts_usec = 0;
-	rec.incl_len =  ntohs(ip6->ip6_plen) +
-					sizeof(struct ip6_hdr) +
-					sizeof(struct ethhdr);
-	rec.orig_len = rec.incl_len;
+	rec.incl_len = len;
+	rec.orig_len = len;
 
 	/* Write record header */
 	write(fd, &rec, sizeof(struct pcaprec_hdr_s));
 
-	len += ntohs(ip6->ip6_plen) +
-			sizeof(struct ip6_hdr) +
-			sizeof(struct ethhdr);
-
+	/* Write packet */
 	write(fd, packet, len);
+
 	close(fd);
 }
