@@ -24,7 +24,8 @@
 #define DEBUG 0
 
 int block = 1;
-int sniff, opt_log, opt_verbose, opt_pkt2big;
+int sniff, opt_verbose, opt_pkt2big;
+char *logfile;
 pthread_t pid0;
 
 void termination_handler() {
@@ -114,8 +115,8 @@ void packet_action(char *packet) {
 
 			if (opt_verbose)
 				debug_packet(packet);
-			if (opt_log)
-				log_packet(packet);
+			if (logfile)
+				log_packet(packet, logfile);
 
 			fake_packet(packet, &svictim);
 			send_packet(packet);
@@ -125,8 +126,8 @@ void packet_action(char *packet) {
 
 				if (opt_verbose)
 					debug_packet(packet);
-				if (opt_log)
-					log_packet(packet);
+				if (logfile)
+					log_packet(packet, logfile);
 
 				fake_packet(packet, cvictim);
 				send_packet(packet);
@@ -163,15 +164,15 @@ int main(int argc, char **argv) {
 
 	sigaction(SIGINT, &saction, NULL);
 
-	opt_log = 0;
 	opt_verbose = 0;
 	opt_pkt2big = 0;
 	opterr = 0;
+	logfile = NULL;
 
-	while ((c = getopt(argc, argv, "lvbd:i:")) != -1) {
+	while ((c = getopt(argc, argv, "vbl:d:i:")) != -1) {
 		switch (c) {
 			case 'l':
-				opt_log = 1;
+				logfile = optarg;
 				break;
 			case 'v':
 				/* Verbose */

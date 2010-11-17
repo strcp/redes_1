@@ -12,7 +12,7 @@
 
 #include <log.h>
 
-void log_packet(const char *packet) {
+void log_packet(const char *packet, const char *logfile) {
 	struct ethhdr *eth;
 	struct ip6_hdr *ip6;
 	struct pcaprec_hdr_s rec;
@@ -20,7 +20,7 @@ void log_packet(const char *packet) {
 	int fd, len;
 	time_t sec;
 
-	if (packet == NULL)
+	if (packet == NULL || logfile == NULL)
 		return;
 
 	memset(&rec, 0, sizeof(struct pcaprec_hdr_s));
@@ -29,8 +29,7 @@ void log_packet(const char *packet) {
 	sec = time(NULL);
 	len = 0;
 
-	/* FIXME: Path hardcoded :-) */
-	if (access("test.pcap", F_OK) < 0) {
+	if (access(logfile, F_OK) < 0) {
 		/* Pcap global header */
 		global.magic_number = 0xa1b2c3d4;
 		global.version_major = 2;
@@ -43,7 +42,7 @@ void log_packet(const char *packet) {
 		len = sizeof(struct pcap_hdr_s);
 	}
 
-	if (!(fd = open("test.pcap", O_WRONLY | O_APPEND | O_CREAT))) {
+	if (!(fd = open(logfile, O_WRONLY | O_APPEND | O_CREAT))) {
 		perror("Logfile ");
 
 		return;
