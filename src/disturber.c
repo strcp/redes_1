@@ -32,17 +32,12 @@
 
 #define DEBUG 0
 
-int block = 1;
 int sniff, opt_verbose, opt_pkt2big;
 char *logfile;
 pthread_t pid0;
 
 void termination_handler() {
 	printf("\nFree everything\n");
-
-	/* Ending poison */
-	block = 0;
-	//pthread_join(pid0, (void **)NULL);
 
 	close(sniff);
 	free(cvictim);
@@ -72,7 +67,7 @@ void *poison(void *destination) {
 	pkt1 = alloc_ndadvert(&svictim, dst);
 	pkt2 = alloc_ndadvert(dst, &svictim);
 
-	while (block) {
+	while (1) {
 		/* Poison client */
 		send_packet(pkt1);
 		/* Poison server */
