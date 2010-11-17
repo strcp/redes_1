@@ -3,3 +3,4 @@
 - Analisar pacotes mesmo que não sejam de advertisement para pegar hwaddr do
 client?
 - Enviar solicitation enquanto não receber advertisement do server?
+- Doxygen
