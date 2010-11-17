@@ -1,3 +1,12 @@
+/******************************************************************
+ * Data : 30.11.2010
+ * Disciplina   : Redes - PUCRS
+ * Professora	: Ana Benso
+ *
+ * Autores  : Cristiano Bolla Fernandes
+ *          : Benito Michelon
+ *****************************************************************/
+
 typedef struct pcap_hdr_s {
 	uint32_t magic_number;	/* magic number */
 	uint16_t version_major;	/* major version number */

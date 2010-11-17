@@ -13,5 +13,3 @@ disturber: $(OBJ)
 clean:
 	rm -rf *.o
 	find . -type f -executable -exec rm {} \;
-pkgtest:
-	$(CC) packets.c -o packets -D __PKG_TEST__

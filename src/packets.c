@@ -1,3 +1,12 @@
+/******************************************************************
+ * Data : 30.11.2010
+ * Disciplina   : Redes - PUCRS
+ * Professora	: Ana Benso
+ *
+ * Autores  : Cristiano Bolla Fernandes
+ *          : Benito Michelon
+ *****************************************************************/
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
