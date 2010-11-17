@@ -1,4 +1,5 @@
 - FIX do exit da thread.
+- define do minimo MTU.
 - Parâmetro para forçar um client a ser atacado.
 - Analisar pacotes mesmo que não sejam de advertisement para pegar hwaddr do
 client?
