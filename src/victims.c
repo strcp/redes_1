@@ -26,7 +26,7 @@ void debug_cvivtim(struct victim *cli) {
 		return;
 	}
 
-	printf("HWADDR: %s\n", ether_ntoa(&(cli->hwaddr)));
+	printf("HWAddr: %s\n", ether_ntoa(&(cli->hwaddr)));
 	memset(buf, 0, INET6_ADDRSTRLEN);
 	inet_ntop(AF_INET6, cli->ipv6.s6_addr, buf, INET6_ADDRSTRLEN);
 	printf("IPv6: %s\n", buf);
@@ -53,7 +53,7 @@ void populate_cvictim(char *pkt) {
 	eth = (struct ethhdr *)pkt;
 	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
 
-	printf("Populando CVICTIM\n");
+	printf("Starting client's structure\n");
 
 	cvictim = (struct victim *)malloc(sizeof(struct victim));
 	memcpy(&(cvictim->ipv6), &(ip6->ip6_src), sizeof(struct in6_addr));

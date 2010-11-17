@@ -40,40 +40,39 @@ void debug_packet(char *packet) {
 	if (ip6->ip6_nxt != IPPROTO_TCP && ip6->ip6_nxt != IPPROTO_ICMPV6)
 		return;
 
-	printf("\n- PACKET START -\n");
+	printf("Ethernet information\n");
+	printf("\tsource: %s\n", ether_ntoa((struct ether_addr *)eth->h_source));
+	printf("\tdestination: %s\n", ether_ntoa((struct ether_addr *)eth->h_dest));
 
-	printf("Ethernet:\n");
-	printf("\tEther src: %s\n", ether_ntoa((struct ether_addr *)eth->h_source));
-	printf("\tEther dest: %s\n", ether_ntoa((struct ether_addr *)eth->h_dest));
-
-	printf("IPv6:\n");
-	inet_ntop(AF_INET6, ip6->ip6_dst.s6_addr, addr, INET6_ADDRSTRLEN);
-	printf("\tTo: %s\n", addr);
-	memset(addr, 0, INET6_ADDRSTRLEN);
+	printf("IPv6 information\n");
 	inet_ntop(AF_INET6, ip6->ip6_src.s6_addr, addr, INET6_ADDRSTRLEN);
-	printf("\tFrom: %s\n", addr);
-	printf("\tPayload Length: %d\n", ntohs(ip6->ip6_plen));
+	printf("\tsource: %s\n", addr);
+
+	memset(addr, 0, INET6_ADDRSTRLEN);
+	inet_ntop(AF_INET6, ip6->ip6_dst.s6_addr, addr, INET6_ADDRSTRLEN);
+	printf("\tdestination: %s\n", addr);
+	printf("\tpayload length: %d bytes\n", ntohs(ip6->ip6_plen));
 
 	switch (ip6->ip6_nxt) {
 		case IPPROTO_ICMPV6:
 			icmpv6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
-			printf("ICMPv6:\n");
-			printf("\tCode: %d\n", icmpv6->icmp6_code);
-			printf("\tType: %d\n", icmpv6->icmp6_type);
-			printf("\tCRC: %x\n", icmpv6->icmp6_cksum);
+			printf("ICMPv6 information\n");
+			printf("\tcode: %d\n", icmpv6->icmp6_code);
+			printf("\ttype: %d\n", icmpv6->icmp6_type);
+			printf("\tcrc: 0x%x\n", icmpv6->icmp6_cksum);
 			break;
 		case IPPROTO_TCP:
 			tcp = (struct tcphdr *)((char *)ip6 + sizeof(struct ip6_hdr));
-			printf("TCP:\n");
-			printf("\tDest Port: %d\n", tcp->dest);
-			printf("\tSrc Port: %d\n", tcp->source);
-			printf("\tSeq: 0x%x\n", tcp->seq);
-			printf("\tCRC: 0x%x\n", tcp->check);
+			printf("TCP information\n");
+			printf("\tdest port: %d\n", tcp->dest);
+			printf("\tsrc port: %d\n", tcp->source);
+			printf("\tseq: 0x%x\n", tcp->seq);
+			printf("\tcrc: 0x%x\n", tcp->check);
 			break;
 		default:
 			break;
 	}
-	printf("- PACKET END -\n\n");
+	printf("\n");
 }
 
 static unsigned short in_cksum(const unsigned char *addr, int len) {

@@ -23,23 +23,12 @@
 #include <packets.h>
 #include <device.h>
 
-#define DEBUG 0
-#define PRINTABLE_ETHADDR(dest, addr) sprintf(dest, \
-					"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", \
-					(unsigned char)addr[0], \
-					(unsigned char)addr[1], \
-					(unsigned char)addr[2], \
-					(unsigned char)addr[3], \
-					(unsigned char)addr[4], \
-					(unsigned char)addr[5]);
-
 void load_device_info(const char *dev_name) {
 	struct ifaddrs *ifaddr, *ifa;
 	struct ifreq ifr;
 	struct sockaddr_in6 *sin6 = NULL;
 	struct sockaddr_in *sin = NULL;
 	int sk;
-
 
 	if (!dev_name) {
 		printf("No device name.\n");
@@ -95,10 +84,9 @@ void load_device_info(const char *dev_name) {
 void dump_device_info(void) {
 	char host[INET6_ADDRSTRLEN];
 
-	printf("- DEVICE DUMP -\n");
-	printf("Name: %s\n", device.name);
-	printf("Index: %i\n", device.index);
-	printf("Flags: 0x%X\n", device.ifa_flags);
+	printf("Device information\n");
+	printf("name: %s\n", device.name);
+	printf("index: %i\n", device.index);
 
 	inet_ntop(AF_INET6, &(device.ipv6), host, INET6_ADDRSTRLEN);
 	printf("IPv6: %s\n", host);
