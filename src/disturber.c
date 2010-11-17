@@ -31,12 +31,9 @@
 #include <communication.h>
 #include <log.h>
 
-#define DEBUG 0
-
 static int sniff, opt_verbose, opt_pkt2big;
 char *logfile;
 pthread_t pid0;
-
 
 static void termination_handler() {
 	printf("\nFree everything\n");
