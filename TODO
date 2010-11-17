@@ -1,5 +1,5 @@
+- FIX do exit da thread.
 - Parâmetro para forçar um client a ser atacado.
-- Enviar solicitation enquanto não receber advertisement do server?
 - Analisar pacotes mesmo que não sejam de advertisement para pegar hwaddr do
 client?
-- Logfile com libpcap?
+- Enviar solicitation enquanto não receber advertisement do server?
