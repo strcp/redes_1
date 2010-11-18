@@ -155,8 +155,13 @@ static void packet_action(char *packet) {
 				fake_packet(packet, &cvictim);
 				send_packet(packet);
 				if (opt_pkt2big) {
+					printf("[%s] Sending \"packet too big\" to server\n", timestamp);
 					pkt = alloc_pkt2big(&cvictim, &svictim, ip6);
 					send_packet(pkt);
+
+					if (logfile)
+						log_packet(pkt, logfile);
+
 					if (pkt)
 						free(pkt);
 				}
