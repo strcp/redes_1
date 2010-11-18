@@ -1,7 +1,7 @@
 - FIX do exit da thread.
 - define do minimo MTU.
-- Parâmetro para forçar um client a ser atacado.
 - Analisar pacotes mesmo que não sejam de advertisement para pegar hwaddr do
 client?
-- Enviar solicitation enquanto não receber advertisement do server?
+- Reenviar solicitation enquanto não receber advertisement do server?
 - Doxygen
+- Atualizar manpage
