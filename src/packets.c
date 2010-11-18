@@ -27,6 +27,7 @@
 #include <victims.h>
 
 #define IPV6_VERSION 6 << 4
+#define IP6_MIN_MTU 1280
 
 typedef struct pseudo_header {
 	struct in6_addr ph_src;
@@ -169,7 +170,7 @@ char *alloc_pkt2big(struct victim *svic, struct victim *dvic, struct ip6_hdr *pk
 	/* ICMPv6 Header */
 	icmp6 = (struct icmp6_hdr *)((char *)ip6 + sizeof(struct ip6_hdr));
 	icmp6->icmp6_type = ICMP6_PACKET_TOO_BIG;
-	icmp6->icmp6_mtu = htonl(100);
+	icmp6->icmp6_mtu = htonl(IP6_MIN_MTU);
 
 	/* Adding the packet that was too big.. */
 	memcpy(((char *)icmp6 + sizeof(struct icmp6_hdr)), pkt,
