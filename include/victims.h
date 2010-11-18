@@ -10,30 +10,10 @@ typedef struct victim {
 	int poisoned;
 } victim;
 
-#if 0
-typedef struct cli_victim {
-	struct cli_victim *nxt;
-	struct victim *cv_victim;
-	pthread_t poison_client;
-} cli_victim;
+struct victim svictim, cvictim;
 
-#define hwaddr cv_victim.hwaddr
-#define ipv4 cv_victim.ipv4
-#define ipv6 cv_victim.ipv6
-#define poisoned cv_victim.poisoned
-#endif
+void init_victim(struct victim *vic, const char *address);
 
-struct victim svictim, *cvictim;
-
-/* Lista de clients vitctims */
-//struct cli_victim *cvictim;
-
-void init_cvictim();
-void init_svictim(const char *sv_address);
-
-void debug_cvivtim(struct victim *cli);
+void debug_vivtim(struct victim *cli);
 int victim_info_complete(struct victim *vic);
-void populate_cvictim(char *pkt);
-
-/*struct victim *get_cvictim(struct ether_addr *hwaddr);
-int add_cvictm(struct ethhdr *eth);*/
+void populate_victim(char *pkt);

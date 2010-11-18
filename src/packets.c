@@ -148,7 +148,7 @@ char *alloc_pkt2big(struct victim *svic, struct victim *dvic, struct ip6_hdr *pk
 		sizeof(struct icmp6_hdr) +
 		sizeof(struct ip6_hdr) + ntohs(pkt->ip6_plen);
 
-	packet = malloc(len );
+	packet = malloc(len);
 	memset(packet, 0, len);
 
 	/* Ethernet Header */

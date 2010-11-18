@@ -27,7 +27,7 @@
 #include <device.h>
 #include <communication.h>
 
-void debug_cvivtim(struct victim *cli) {
+void debug_vivtim(struct victim *cli) {
 	char buf[INET6_ADDRSTRLEN];
 
 	if (!victim_info_complete(cli)) {
@@ -55,42 +55,36 @@ int victim_info_complete(struct victim *vic) {
 	return 1;
 }
 
-void populate_cvictim(char *pkt) {
+void populate_victim(char *pkt) {
 	struct ethhdr *eth;
 	struct ip6_hdr *ip6;
 
 	eth = (struct ethhdr *)pkt;
 	ip6 = (struct ip6_hdr *)((char *)eth + sizeof(struct ethhdr));
 
-	printf("Starting client's structure\n");
+	printf("Starting victim's structure\n");
 
-	cvictim = (struct victim *)malloc(sizeof(struct victim));
-	memcpy(&(cvictim->ipv6), &(ip6->ip6_src), sizeof(struct in6_addr));
-	memcpy(&(cvictim->hwaddr), &(eth->h_source), ETH_ALEN);
+	memcpy(&cvictim.ipv6, &ip6->ip6_src, sizeof(struct in6_addr));
+	memcpy(&cvictim.hwaddr, &eth->h_source, ETH_ALEN);
 
-	debug_cvivtim(cvictim);
+	debug_vivtim(&cvictim);
 }
 
-void init_svictim(const char *sv_address) {
-	char server_victim[INET6_ADDRSTRLEN];
+void init_victim(struct victim *vic, const char *address) {
+	char addr[INET6_ADDRSTRLEN];
 	char *pkt;
 
-	if (inet_pton(AF_INET6, sv_address, &svictim.ipv6) <= 0) {
+	if (inet_pton(AF_INET6, address, &vic->ipv6) <= 0) {
 		printf("Error setting victim's address\n");
 		exit(EXIT_FAILURE);
 	}
 
-	inet_ntop(AF_INET6, &svictim.ipv6, server_victim, INET6_ADDRSTRLEN);
-	printf("Server to attack: %s\n", server_victim);
-	printf("Sending Neighbor Solicitation to %s\n", server_victim);
+	inet_ntop(AF_INET6, &vic->ipv6, addr, INET6_ADDRSTRLEN);
+	printf("Sending Neighbor Solicitation to %s\n", addr);
 
-	pkt = alloc_ndsolicit(&svictim.ipv6);
+	pkt = alloc_ndsolicit(&vic->ipv6);
 	send_packet(pkt);
 
 	if (pkt)
 		free(pkt);
-}
-
-void init_cvictim() {
-	cvictim = NULL;
 }
