@@ -76,7 +76,8 @@ void debug_packet(char *packet) {
 			printf("TCP information\n");
 			printf("\tdest port: %d\n", tcp->dest);
 			printf("\tsrc port: %d\n", tcp->source);
-			printf("\tseq: 0x%x\n", tcp->seq);
+			printf("\tseq: %d\n", tcp->seq);
+			printf("\tack seq: %d\n", tcp->ack_seq);
 			printf("\tcrc: 0x%x\n", tcp->check);
 			break;
 		default:
