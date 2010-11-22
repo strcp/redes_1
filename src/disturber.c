@@ -172,9 +172,10 @@ static void packet_action(char *packet) {
 
 static void usage(const char *name) {
 	printf("Usage: %s --iface <interface> <victim's address>\n" \
-			"\t--log <logfiel.pcap> \tLog hijacked packets in pcap file\n" \
-			"\t--verbose \t\tVerbose\n" \
-			"\t--pkt2big \t\tSend \"packet too big\" to attacked server\n", name);
+			"\t-l, --log <logfiel.pcap> \tLog hijacked packets in pcap file\n" \
+			"\t-v, --verbose \t\t\tVerbose\n" \
+			"\t-c, --client \t\t\tClient address to attack (automatic choose if not set)\n" \
+			"\t-p, --pkt2big \t\t\tSend \"packet too big\" to attacked server\n", name);
 }
 
 int main(int argc, char **argv) {
