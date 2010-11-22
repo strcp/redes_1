@@ -1,4 +1,4 @@
-- Não enviar ACKs pro server, apenas pkt2big quando pkt2big estiver ativado.
+- Testar: Não enviar ACKs pro server, apenas pkt2big quando pkt2big estiver ativado.
 - FIX do exit da thread.
 - Analisar pacotes mesmo que não sejam de advertisement para pegar hwaddr do
 client?

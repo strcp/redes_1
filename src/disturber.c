@@ -121,6 +121,7 @@ static void get_victims(char *packet) {
 static void packet_action(char *packet) {
 	struct ethhdr *eth;
 	struct ip6_hdr *ip6;
+	struct tcphdr *tcp;
 	char *pkt, timestamp[10];
 	time_t tt;
 	struct tm *t;
@@ -140,7 +141,11 @@ static void packet_action(char *packet) {
 				debug_packet(packet);
 			if (logfile)
 				log_packet(packet, logfile);
-
+			tcp = (struct tcphdr *)((char *)ip6 + sizeof(struct ip6_hdr));
+			if (ip6->ip6_nxt == IPPROTO_TCP)
+				/* XXX: need to be tested. */
+				if (tcp->ack && opt_pkt2big)
+					return;
 			fake_packet(packet, &svictim);
 			send_packet(packet);
 		} else if (!memcmp(&(ip6->ip6_src), &(svictim.ipv6), sizeof(struct in6_addr))) {
