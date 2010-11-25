@@ -1,0 +1,17 @@
+PROJECT_NAME           	= "Trabalho de Redes - PUCRS"
+OUTPUT_DIRECTORY       	= docs/refs
+OUTPUT_LANGUAGE        	= Brazilian
+EXTRACT_ALL            	= YES
+
+INPUT                  	= .
+FILE_PATTERNS          	= *.c \
+                          *.h
+EXCLUDE_PATTERNS	= */testes/*
+
+RECURSIVE              	= YES
+GENERATE_HTML          	= YES
+INCLUDE_GRAPH          	= YES
+INCLUDED_BY_GRAPH      	= YES
+GRAPHICAL_HIERARCHY    	= YES
+DOT_IMAGE_FORMAT       	= png
+GENERATE_LEGEND        	= YES
