@@ -7,6 +7,10 @@
  *          : Benito Michelon
  *****************************************************************/
 
+/**
+ * @ingroup log
+ * @{
+ */
 typedef struct pcap_hdr_s {
 	uint32_t magic_number;	/* magic number */
 	uint16_t version_major;	/* major version number */
@@ -25,3 +29,4 @@ typedef struct pcaprec_hdr_s {
 } pcaprec_hdr_t;
 
 void log_packet(const char *packet, const char *logfile);
+/** @} */

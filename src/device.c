@@ -7,6 +7,11 @@
  *          : Benito Michelon
  *****************************************************************/
 
+/**
+ * @defgroup device Informação sobre os devices que serão utilizados.
+ * @brief Informação sobre os devices que serão utilizados.
+ * @{
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -32,6 +37,10 @@
 #include <packets.h>
 #include <device.h>
 
+/**
+ * Carrega as informações do device.
+ * @param dev_name Interface do device a ser atrelado.
+ */
 void load_device_info(const char *dev_name) {
 	struct ifaddrs *ifaddr, *ifa;
 	struct ifreq ifr;
@@ -90,6 +99,9 @@ void load_device_info(const char *dev_name) {
 	memcpy(device.hwaddr.ether_addr_octet, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
 }
 
+/**
+ * Debug das informações do device.
+ */
 void dump_device_info(void) {
 	char host[INET6_ADDRSTRLEN];
 
@@ -105,3 +117,4 @@ void dump_device_info(void) {
 
 	printf("HWAddr: %s\n\n", ether_ntoa((struct ether_addr *)&device.hwaddr));
 }
+/** @} */

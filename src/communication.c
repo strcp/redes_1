@@ -7,6 +7,11 @@
  *          : Benito Michelon
  *****************************************************************/
 
+/**
+ * @defgroup communication Criação de sockets e envio de pacotes
+ * @brief Criação de sockets e envio de pacotes
+ * @{
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,6 +29,11 @@
 #include <device.h>
 #include <packets.h>
 
+/**
+ * Cria um raw socket.
+ * @param proto Protocolo do socket.
+ * @return Retorna o descritor do socket criado.
+ */
 static int raw_socket(int proto) {
 	int rawsock;
 
@@ -35,6 +45,12 @@ static int raw_socket(int proto) {
 	return rawsock;
 }
 
+/**
+ * Atrela um socket a um device.
+ * @param device Interface do device a ser atrelado.
+ * @param rawsock Descritor da socket.
+ * @return Retorna > 0 em sucesso e < 0 em falha.
+ */
 static int bind_socket_to_device(char *device, int rawsock) {
 	struct packet_mreq *pkt;
 	struct ifreq ifr;
@@ -67,6 +83,11 @@ static int bind_socket_to_device(char *device, int rawsock) {
 	return 1;
 }
 
+/**
+ * Envia pacote de dados desde os headers ethernet.
+ * @param pkt Pacote com dados desde os headers ethernet.
+ * @return Retorna > 0 em sucesso e < 0 em falha.
+ */
 int send_packet(char *pkt) {
 	struct ethhdr *eth;
 	struct ip6_hdr *ip6;
@@ -103,6 +124,11 @@ int send_packet(char *pkt) {
 	return 1;
 }
 
+/**
+ * Cria um socket promisc.
+ * @param dev_name Interface que ficará promisc..
+ * @return Retorna socket em promisc mode.
+ */
 int get_promisc_socket(char *dev_name) {
 	int raw;
 
@@ -114,3 +140,4 @@ int get_promisc_socket(char *dev_name) {
 
 	return raw;
 }
+/** @} */

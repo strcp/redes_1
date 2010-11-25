@@ -7,6 +7,11 @@
  *          : Benito Michelon
  *****************************************************************/
 
+/**
+ * @defgroup log Log dos pacotes roubas em formato pcap.
+ * @brief Log dos pacotes roubas em formato pcap.
+ * @{
+ */
 #include <stdio.h>
 #include <unistd.h>
 #include <time.h>
@@ -21,6 +26,11 @@
 
 #include <log.h>
 
+/**
+ * Loga os pacotes em formato pcap.
+ * @param packet Pacote que será logado.
+ * @param logfile Arquivo no qual será logado.
+ */
 void log_packet(const char *packet, const char *logfile) {
 	struct ethhdr *eth;
 	struct ip6_hdr *ip6;
@@ -81,3 +91,4 @@ void log_packet(const char *packet, const char *logfile) {
 
 	close(fd);
 }
+/** @} */

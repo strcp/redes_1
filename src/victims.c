@@ -7,6 +7,11 @@
  *          : Benito Michelon
  *****************************************************************/
 
+/**
+ * @defgroup victims Dados sobre as vítimas.
+ * @brief Dados sobre as vítimas.
+ * @{
+ */
 #include <stdio.h>
 #include <unistd.h>
 #include <pthread.h>
@@ -41,6 +46,11 @@ void debug_vivtim(struct victim *cli) {
 	printf("IPv6: %s\n", buf);
 }
 
+/**
+ * Verifica se uma estrutura de vítima está completa.
+ * @param vic Vítima a ser verificada.
+ * @return 1 se estiver completa e 0 caso não esteja.
+ */
 int victim_info_complete(struct victim *vic) {
 	struct ether_addr eth;
 	struct in6_addr ipv6;
@@ -55,6 +65,10 @@ int victim_info_complete(struct victim *vic) {
 	return 1;
 }
 
+/**
+ * Popula os dados de uma vítima baseado em um pacote recebido.
+ * @param pkt Pacote recebido.
+ */
 void populate_victim(char *pkt) {
 	struct ethhdr *eth;
 	struct ip6_hdr *ip6;
@@ -70,6 +84,11 @@ void populate_victim(char *pkt) {
 	debug_vivtim(&cvictim);
 }
 
+/**
+ * Popula a estrutura de uma vítima baseado em seu endereço endereço.
+ * @param vic Vítima que sera iniciada.
+ * @param address Endereço da vítima.
+ */
 void init_victim(struct victim *vic, const char *address) {
 	char addr[INET6_ADDRSTRLEN];
 	char *pkt;
@@ -88,3 +107,4 @@ void init_victim(struct victim *vic, const char *address) {
 	if (pkt)
 		free(pkt);
 }
+/** @} */

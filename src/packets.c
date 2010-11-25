@@ -7,6 +7,11 @@
  *          : Benito Michelon
  *****************************************************************/
 
+/**
+ * @defgroup packets Formação de pacotes.
+ * @brief Formação de pacotes.
+ * @{
+ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -115,7 +120,6 @@ static unsigned short icmp6_cksum(struct ip6_hdr *ip6) {
 	struct icmp6_hdr *icmp6, *tmp;
 	struct pseudo_header *ph;
 
-	//TODO: Check for memory overrun
 	buf = malloc(sizeof(struct pseudo_header) + ntohs(ip6->ip6_plen));
 	memset(buf, 0, sizeof(struct pseudo_header) + ntohs(ip6->ip6_plen));
 	ph = (struct pseudo_header *)buf;
@@ -134,6 +138,13 @@ static unsigned short icmp6_cksum(struct ip6_hdr *ip6) {
 	return sum;
 }
 
+/**
+ * Aloca um pacote de "packet too big".
+ * @param svic Vítima origem.
+ * @param dvic Vítima destino.
+ * @param pkt Pacote que supostamente teria gerado a mensagem.
+ * @return Retorna o pacote de "packet too big".
+ */
 // WARN: needs to be freed
 char *alloc_pkt2big(struct victim *svic, struct victim *dvic, struct ip6_hdr *pkt) {
 	struct ethhdr *eth;
@@ -182,6 +193,11 @@ char *alloc_pkt2big(struct victim *svic, struct victim *dvic, struct ip6_hdr *pk
 	return packet;
 }
 
+/**
+ * Aloca um pacote de "neighbor solicitation".
+ * @param addr Endereço a ser solicitado.
+ * @return Retorna o pacote de "neighbor solicitation".
+ */
 // WARN:  needs to be freed
 char *alloc_ndsolicit(struct in6_addr *addr) {
 	struct ethhdr *eth;
@@ -243,8 +259,13 @@ char *alloc_ndsolicit(struct in6_addr *addr) {
 	return packet;
 }
 
+/**
+ * Aloca um pacote de "neighbor advertisement".
+ * @param svic Vítima origem.
+ * @param dvic Vítima destino.
+ * @return Retorna o pacote de "neighbor advertisement".
+ */
 // WARN:  needs to be freed
-/* source victim data, dest victim */
 char *alloc_ndadvert(struct victim *svic, struct victim *dvic) {
 	struct ethhdr *eth;
 	struct ip6_hdr *ip6;
@@ -301,6 +322,11 @@ char *alloc_ndadvert(struct victim *svic, struct victim *dvic) {
 	return packet;
 }
 
+/**
+ * Altera o mac destino de um pacote.
+ * @param packet Pacote que será modificado.
+ * @param dvic Vítima destino.
+ */
 void fake_packet(char *packet, struct victim *dvic) {
 	struct ethhdr *eth;
 
@@ -309,3 +335,4 @@ void fake_packet(char *packet, struct victim *dvic) {
 	memcpy(eth->h_source, &device.hwaddr, ETH_ALEN);
 	memcpy(eth->h_dest, &dvic->hwaddr, ETH_ALEN);
 }
+/** @} */

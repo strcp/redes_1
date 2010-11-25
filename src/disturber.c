@@ -7,6 +7,11 @@
  *          : Benito Michelon
  *****************************************************************/
 
+/**
+ * @defgroup disturber Core do disturber.
+ * @brief Lógica de ataque e parser de opções.
+ * @{
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -36,12 +41,16 @@ char *logfile;
 pthread_t pid0;
 
 static void termination_handler() {
-	printf("\nFree everything\n");
+	printf("\nTerminating..\n");
 
 	close(sniff);
 	exit(0);
 }
 
+/**
+ * Thread que envia poison para client e server.
+ * @param destination Endereço do client a ser "poisoned".
+ */
 static void *poison(void *destination) {
 	struct victim *dst = (struct victim *)destination;
 	char *pkt1, *pkt2;
@@ -77,6 +86,10 @@ static void *poison(void *destination) {
 	pthread_exit(NULL);
 }
 
+/**
+ * Complementa as informações dos atacados recebendo o endereço de mac.
+ * @param packet Pacote recebido.
+ */
 static void get_victims(char *packet) {
 	struct ethhdr *eth;
 	struct ip6_hdr *ip6;
@@ -118,6 +131,10 @@ static void get_victims(char *packet) {
 	}
 }
 
+/**
+ * Decide quais decisões tomar baseado no pacote recebido.
+ * @param packet Pacote recebido.
+ */
 static void packet_action(char *packet) {
 	struct ethhdr *eth;
 	struct ip6_hdr *ip6;
@@ -272,3 +289,4 @@ int main(int argc, char **argv) {
 
 	return 0;
 }
+/** @} */
