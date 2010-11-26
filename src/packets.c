@@ -79,10 +79,11 @@ void debug_packet(char *packet) {
 		case IPPROTO_TCP:
 			tcp = (struct tcphdr *)((char *)ip6 + sizeof(struct ip6_hdr));
 			printf("TCP information\n");
-			printf("\tdest port: %d\n", tcp->dest);
-			printf("\tsrc port: %d\n", tcp->source);
-			printf("\tseq: %d\n", (unsigned int)tcp->seq);
-			printf("\tack seq: %d\n", (unsigned int)tcp->ack_seq);
+			printf("\tdest port: %d\n", ntohs(tcp->dest));
+			printf("\tsrc port: %d\n", ntohs(tcp->source));
+			printf("\tseq: %d\n", ntohl(tcp->seq));
+			printf("\tack seq: %d\n", ntohl(tcp->ack_seq));
+			printf("\tack: %s\n", tcp->ack ? "set" : "unset");
 			printf("\tcrc: 0x%x\n", tcp->check);
 			break;
 		default:
