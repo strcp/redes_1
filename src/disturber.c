@@ -193,7 +193,7 @@ static void packet_action(char *packet) {
 }
 
 static void usage(const char *name) {
-	printf("Usage: %s --iface <interface> <victim's address>\n" \
+	printf("Usage: %s --interface <interface> <victim's address>\n" \
 			"\t-l, --log <logfiel.pcap> \tLog hijacked packets in pcap file\n" \
 			"\t-v, --verbose \t\t\tVerbose\n" \
 			"\t-c, --client \t\t\tClient address to attack (automatic choose if not set)\n" \
