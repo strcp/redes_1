@@ -3,3 +3,4 @@
 - Analisar pacotes mesmo que não sejam de advertisement para pegar hwaddr do
 client?
 - Reenviar solicitation enquanto não receber advertisement do server?
+- Escolher o endereço do atacante baseado no endereço do atacado.
